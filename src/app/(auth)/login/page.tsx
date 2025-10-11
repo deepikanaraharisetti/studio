@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/loading-spinner';
+import { useAuth } from '@/providers/auth-provider';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -24,6 +25,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { loginWithMockUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -36,12 +38,8 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    // Simulate backend login
     if (data.email === 'test@example.com' && data.password === 'password') {
-      // In a real app, you would get a user object and profile here.
-      // For now, we'll just simulate a successful login state.
-      // A full implementation would require changes to the AuthProvider.
-      // This change just bypasses the login screen for now.
+      loginWithMockUser();
       setTimeout(() => {
         router.push('/dashboard');
       }, 1000);
