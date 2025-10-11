@@ -83,7 +83,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
         <Card>
           <CardHeader className="p-0">
             <div className="aspect-video relative">
-              <Image src={projectImage.imageUrl} alt={opportunity.title} fill className="object-cover rounded-t-lg" data-ai-hint={projectImage.imageHint} />
+              {projectImage && <Image src={projectImage.imageUrl} alt={opportunity.title} fill className="object-cover rounded-t-lg" data-ai-hint={projectImage.imageHint} />}
             </div>
           </CardHeader>
           <CardContent className="p-6">
