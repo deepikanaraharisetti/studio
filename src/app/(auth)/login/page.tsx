@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,13 +36,19 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      router.push('/dashboard');
-    } catch (error: any) {
+    // Simulate backend login
+    if (data.email === 'test@example.com' && data.password === 'password') {
+      // In a real app, you would get a user object and profile here.
+      // For now, we'll just simulate a successful login state.
+      // A full implementation would require changes to the AuthProvider.
+      // This change just bypasses the login screen for now.
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
+    } else {
       toast({
         title: 'Login Failed',
-        description: error.message || 'An unexpected error occurred. Please try again.',
+        description: 'Invalid email or password. Use test@example.com and "password".',
         variant: 'destructive',
       });
       setIsLoading(false);
