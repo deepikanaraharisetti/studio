@@ -1,3 +1,64 @@
 {
-  "placeholderImages": []
+  "placeHolderImages": [
+    {
+      "id": "hero-1",
+      "description": "A group of diverse professionals collaborating around a table with laptops.",
+      "imageUrl": "https://picsum.photos/seed/hero1/600/400",
+      "imageHint": "team collaboration"
+    },
+    {
+      "id": "avatar-1",
+      "description": "Portrait of a smiling woman.",
+      "imageUrl": "https://picsum.photos/seed/avatar1/100/100",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "avatar-2",
+      "description": "Portrait of a smiling man with glasses.",
+      "imageUrl": "https://picsum.photos/seed/avatar2/100/100",
+      "imageHint": "man portrait"
+    },
+    {
+      "id": "avatar-3",
+      "description": "Portrait of a person with short hair.",
+      "imageUrl": "https://picsum.photos/seed/avatar3/100/100",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "avatar-4",
+      "description": "Portrait of a woman with curly hair.",
+      "imageUrl": "https://picsum.photos/seed/avatar4/100/100",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "avatar-5",
+      "description": "Portrait of a man in a suit.",
+      "imageUrl": "https://picsum.photos/seed/avatar5/100/100",
+      "imageHint": "man portrait"
+    },
+    {
+      "id": "project-1",
+      "description": "A computer screen with lines of code.",
+      "imageUrl": "https://picsum.photos/seed/project1/400/250",
+      "imageHint": "code screen"
+    },
+    {
+      "id": "project-2",
+      "description": "A whiteboard covered in sticky notes and diagrams.",
+      "imageUrl": "https://picsum.photos/seed/project2/400/250",
+      "imageHint": "whiteboard brainstorming"
+    },
+    {
+      "id": "project-3",
+      "description": "A person designing a user interface on a tablet.",
+      "imageUrl": "https://picsum.photos/seed/project3/400/250",
+      "imageHint": "ui design"
+    },
+    {
+      "id": "project-4",
+      "description": "Close-up of a circuit board.",
+      "imageUrl": "https://picsum.photos/seed/project4/400/250",
+      "imageHint": "circuit board"
+    }
+  ]
 }
