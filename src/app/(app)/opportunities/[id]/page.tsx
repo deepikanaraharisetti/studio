@@ -5,7 +5,6 @@ import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Opportunity } from '@/lib/types';
 import { useAuth } from '@/providers/auth-provider';
-import Image from 'next/image';
 
 import LoadingSpinner from '@/components/loading-spinner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
