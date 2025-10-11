@@ -148,7 +148,7 @@ export default function CreateOpportunityForm() {
                         <FormItem>
                         <FormLabel>Required Skills</FormLabel>
                         <FormControl>
-                            <>
+                            <div className="space-y-2">
                                 <div className="flex flex-wrap gap-2">
                                     {field.value.map(skill => (
                                     <Badge key={skill} variant="secondary" className="text-sm py-1 pl-3 pr-2">
@@ -163,7 +163,7 @@ export default function CreateOpportunityForm() {
                                     placeholder="e.g., React, Python, UI/UX Design (press Enter to add)"
                                     onKeyDown={(e) => handleArrayInput(e, 'requiredSkills')}
                                 />
-                            </>
+                            </div>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -177,7 +177,7 @@ export default function CreateOpportunityForm() {
                         <FormItem>
                         <FormLabel>Open Roles</FormLabel>
                         <FormControl>
-                            <>
+                            <div className="space-y-2">
                                 <div className="flex flex-wrap gap-2">
                                     {field.value.map(role => (
                                     <Badge key={role} variant="secondary" className="text-sm py-1 pl-3 pr-2">
@@ -192,7 +192,7 @@ export default function CreateOpportunityForm() {
                                     placeholder="e.g., Frontend Developer, Project Manager (press Enter to add)"
                                     onKeyDown={(e) => handleArrayInput(e, 'roles')}
                                 />
-                            </>
+                            </div>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
