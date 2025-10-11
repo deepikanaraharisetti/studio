@@ -1,11 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { Code, Users, Briefcase, Zap } from 'lucide-react';
+import { Users, Briefcase, Zap } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function LandingPage() {
-  const heroImage = PlaceHolderImages.find(p => p.id === 'hero-1');
   return (
     <div className="flex flex-col min-h-screen">
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -42,17 +39,8 @@ export default function LandingPage() {
                 </Button>
               </div>
             </div>
-            <div className="hidden md:block">
-              {heroImage && (
-                <Image
-                  src={heroImage.imageUrl}
-                  alt={heroImage.description}
-                  width={600}
-                  height={400}
-                  className="rounded-lg shadow-2xl"
-                  data-ai-hint={heroImage.imageHint}
-                />
-              )}
+            <div className="hidden md:block bg-muted rounded-lg shadow-2xl h-80 w-full">
+              {/* Image placeholder */}
             </div>
           </div>
         </section>

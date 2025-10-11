@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Briefcase, FileText, MessageSquare } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
@@ -67,7 +66,6 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
   };
 
   const isMember = opportunity?.teamMembers.some(member => member.uid === userProfile?.uid);
-  const projectImage = PlaceHolderImages.find(p => p.id.startsWith('project-')) || PlaceHolderImages[0];
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
@@ -82,8 +80,8 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
       <div className="lg:col-span-2 space-y-8">
         <Card>
           <CardHeader className="p-0">
-            <div className="aspect-video relative">
-              {projectImage && <Image src={projectImage.imageUrl} alt={opportunity.title} fill className="object-cover rounded-t-lg" data-ai-hint={projectImage.imageHint} />}
+            <div className="aspect-video relative bg-muted rounded-t-lg">
+              {/* Image placeholder */}
             </div>
           </CardHeader>
           <CardContent className="p-6">

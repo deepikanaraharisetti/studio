@@ -5,7 +5,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -17,20 +16,13 @@ function getInitials(name: string | null | undefined): string {
 }
 
 export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
-  const projectImage = PlaceHolderImages.find(p => p.id.startsWith('project-')) || PlaceHolderImages[0];
 
   return (
     <Link href={`/opportunities/${opportunity.id}`} className="block group">
       <Card className="h-full flex flex-col transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1">
         <CardHeader className="p-0">
-          <div className="aspect-video relative">
-            <Image
-              src={projectImage.imageUrl}
-              alt={opportunity.title}
-              fill
-              className="object-cover rounded-t-lg"
-              data-ai-hint={projectImage.imageHint}
-            />
+          <div className="aspect-video relative bg-muted rounded-t-lg">
+            {/* Image placeholder */}
           </div>
         </CardHeader>
         <CardContent className="flex-grow p-4 space-y-3">
