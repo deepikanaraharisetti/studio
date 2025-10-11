@@ -1,3 +1,4 @@
+
 import { Button } from '@/components/ui/button';
 import { Users, Briefcase, Zap } from 'lucide-react';
 import Link from 'next/link';
@@ -39,9 +40,7 @@ export default function LandingPage() {
                 </Button>
               </div>
             </div>
-            <div className="hidden md:block bg-muted rounded-lg shadow-2xl h-80 w-full">
-              {/* Image placeholder */}
-            </div>
+            
           </div>
         </section>
 

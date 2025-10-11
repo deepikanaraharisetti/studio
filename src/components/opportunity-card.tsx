@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Opportunity } from '@/lib/types';
@@ -20,13 +21,8 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
   return (
     <Link href={`/opportunities/${opportunity.id}`} className="block group">
       <Card className="h-full flex flex-col transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1">
-        <CardHeader className="p-0">
-          <div className="aspect-video relative bg-muted rounded-t-lg">
-            {/* Image placeholder */}
-          </div>
-        </CardHeader>
         <CardContent className="flex-grow p-4 space-y-3">
-          <CardTitle className="text-lg font-bold leading-snug group-hover:text-primary transition-colors">
+          <CardTitle className="text-lg font-bold leading-snug group-hover:text-primary transition-colors pt-4">
             {opportunity.title}
           </CardTitle>
           <p className="text-sm text-muted-foreground line-clamp-2">

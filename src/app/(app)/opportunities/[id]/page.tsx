@@ -79,11 +79,6 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
     <div className="grid gap-8 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-8">
         <Card>
-          <CardHeader className="p-0">
-            <div className="aspect-video relative bg-muted rounded-t-lg">
-              {/* Image placeholder */}
-            </div>
-          </CardHeader>
           <CardContent className="p-6">
             <h1 className="text-3xl font-bold mb-2">{opportunity.title}</h1>
             <div className="flex items-center gap-2 text-muted-foreground text-sm mb-6">
