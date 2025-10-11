@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Briefcase } from 'lucide-react';
+import { ClientOnly } from '@/components/client-only';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,7 +12,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="text-xl font-bold">CrewUp</span>
         </Link>
       </div>
-      {children}
+      <ClientOnly>
+        {children}
+      </ClientOnly>
     </main>
   );
 }
