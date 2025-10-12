@@ -26,15 +26,15 @@ export default function LandingPage() {
 
       <main className="flex-grow">
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
+          <div className="grid md:grid-cols-1 gap-12 items-center text-center">
+            <div className="space-y-6 max-w-2xl mx-auto">
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-primary font-headline">
                 Build Your Dream Team, Instantly.
               </h1>
               <p className="text-lg text-muted-foreground">
                 CrewUp is where students, professionals, and campus organizations connect. Post your project, find skilled collaborators, and bring your ideas to life.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" asChild>
                   <Link href="/signup">Get Started for Free</Link>
                 </Button>
@@ -42,16 +42,6 @@ export default function LandingPage() {
                   <Link href="/dashboard">Explore Opportunities</Link>
                 </Button>
               </div>
-            </div>
-            <div className="hidden md:flex items-center justify-center">
-                <Image 
-                    src="https://picsum.photos/seed/crew-up/600/500" 
-                    alt="A diverse team collaborating on a project" 
-                    width={600} 
-                    height={500} 
-                    className="rounded-xl shadow-lg"
-                    data-ai-hint="team collaboration"
-                />
             </div>
           </div>
         </section>
