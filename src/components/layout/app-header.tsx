@@ -8,6 +8,7 @@ import {
   Menu,
   PlusSquare,
   User as UserIcon,
+  FolderKanban
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,21 +20,39 @@ import UserNav from './user-nav';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-
-const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
-  { href: '/profile', icon: UserIcon, label: 'Profile' },
-];
+import { useAuth } from '@/providers/auth-provider';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Opportunity } from '@/lib/types';
+import { Badge } from '../ui/badge';
 
 export default function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const { userProfile } = useAuth();
+  
+  const [ownedOpportunities] = useCollection(
+    userProfile ? query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid)) : null
+  );
+
+  const totalJoinRequests = ownedOpportunities?.docs.reduce((acc, doc) => {
+    const opportunity = doc.data() as Opportunity;
+    return acc + (opportunity.joinRequests?.length || 0);
+  }, 0) || 0;
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
   };
+
+  const navItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
+    { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
+    { href: '/profile', icon: UserIcon, label: 'Profile' },
+  ];
+
 
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 sticky top-0 z-30">
@@ -56,12 +75,13 @@ export default function AppHeader() {
                 <Button
                     key={item.href}
                     variant={pathname.startsWith(item.href) ? 'sidebar-secondary' as any : 'ghost'}
-                    className="w-full justify-start gap-3 text-base h-12"
+                    className="w-full justify-start gap-3 text-base h-12 relative"
                     asChild
                 >
                     <Link href={item.href}>
-                    <item.icon className="w-5 h-5" />
-                    {item.label}
+                      <item.icon className="w-5 h-5" />
+                      {item.label}
+                      {item.badge && <Badge className="absolute right-4">{item.badge}</Badge>}
                     </Link>
                 </Button>
             ))}

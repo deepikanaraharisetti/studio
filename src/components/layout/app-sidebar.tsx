@@ -11,22 +11,41 @@ import {
   LogOut,
   PlusSquare,
   User as UserIcon,
+  FolderKanban,
 } from 'lucide-react';
+import { useAuth } from '@/providers/auth-provider';
+import { Badge } from '../ui/badge';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Opportunity } from '@/lib/types';
 
-const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
-  { href: '/profile', icon: UserIcon, label: 'Profile' },
-];
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { userProfile } = useAuth();
+
+  const [ownedOpportunities, loading, error] = useCollection(
+    userProfile ? query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid)) : null
+  );
+
+  const totalJoinRequests = ownedOpportunities?.docs.reduce((acc, doc) => {
+    const opportunity = doc.data() as Opportunity;
+    return acc + (opportunity.joinRequests?.length || 0);
+  }, 0) || 0;
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
   };
+
+  const navItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
+    { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
+    { href: '/profile', icon: UserIcon, label: 'Profile' },
+  ];
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -41,12 +60,13 @@ export default function AppSidebar() {
           <Button
             key={item.href}
             variant={pathname.startsWith(item.href) ? 'sidebar-secondary' as any : 'ghost'}
-            className="w-full justify-start gap-3 text-base h-12"
+            className="w-full justify-start gap-3 text-base h-12 relative"
             asChild
           >
             <Link href={item.href}>
               <item.icon className="w-5 h-5" />
               {item.label}
+              {item.badge && <Badge className="absolute right-4">{item.badge}</Badge>}
             </Link>
           </Button>
         ))}
