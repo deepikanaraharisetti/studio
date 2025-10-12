@@ -43,12 +43,12 @@ export default function LandingPage() {
             </div>
             <div className="hidden md:block">
                 <Image 
-                    src="https://picsum.photos/seed/landingHero/600/500"
-                    alt="A diverse team collaborating on a project"
+                    src="https://picsum.photos/seed/crew/600/500"
+                    alt="An animated illustration of a diverse team working together on a project"
                     width={600}
                     height={500}
                     className="rounded-xl shadow-2xl"
-                    data-ai-hint="team collaboration"
+                    data-ai-hint="teamwork illustration"
                 />
             </div>
           </div>
