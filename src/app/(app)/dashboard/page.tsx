@@ -206,25 +206,29 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">All Opportunities</h2>
-        {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => <OpportunitySkeleton key={i} />)}
-          </div>
-        ) : displayedOpportunities.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {displayedOpportunities.map(opportunity => (
-              <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-            ))}
-          </div>
-        ) : (
-          <Card className="text-center py-12">
-            <h3 className="text-lg font-medium">No opportunities found</h3>
-            <p className="text-muted-foreground mt-2">Try adjusting your search or filters!</p>
-          </Card>
-        )}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Explore Opportunities</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => <OpportunitySkeleton key={i} />)}
+            </div>
+          ) : displayedOpportunities.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {displayedOpportunities.map(opportunity => (
+                <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium">No opportunities found</h3>
+              <p className="text-muted-foreground mt-2">Try adjusting your search or filters!</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
