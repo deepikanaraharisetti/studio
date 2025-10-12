@@ -89,12 +89,12 @@ export default function LandingPage() {
                 <Button size="lg" asChild>
                   <Link href="/signup">Get Started for Free</Link>
                 </Button>
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="outline" asChild>
                   <Link href="/dashboard">Explore Opportunities</Link>
                 </Button>
               </div>
             </div>
-            <div className="hidden md:flex items-center justify-start">
+            <div className="hidden md:flex items-center justify-center">
                 <FeaturedProjectsCarousel />
             </div>
           </div>
