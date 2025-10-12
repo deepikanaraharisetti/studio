@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Users, Briefcase, Zap } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LandingPage() {
   return (
@@ -40,7 +41,16 @@ export default function LandingPage() {
                 </Button>
               </div>
             </div>
-            
+            <div className="hidden md:block">
+                <Image 
+                    src="https://picsum.photos/seed/landingHero/600/500"
+                    alt="A diverse team collaborating on a project"
+                    width={600}
+                    height={500}
+                    className="rounded-xl shadow-2xl"
+                    data-ai-hint="team collaboration"
+                />
+            </div>
           </div>
         </section>
 

@@ -7,6 +7,12 @@
       "imageHint": "team collaboration"
     },
     {
+      "id": "landing-hero",
+      "description": "A diverse group of people working together on a project in a modern office.",
+      "imageUrl": "https://picsum.photos/seed/landingHero/600/500",
+      "imageHint": "team collaboration"
+    },
+    {
       "id": "avatar-1",
       "description": "Portrait of a smiling woman.",
       "imageUrl": "https://picsum.photos/seed/avatar1/100/100",
