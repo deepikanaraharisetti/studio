@@ -59,7 +59,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Explore' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
-    { href: `/users/${userProfile?.uid}`, icon: User, label: 'My Profile' },
   ];
 
   return (
