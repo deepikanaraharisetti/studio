@@ -186,7 +186,7 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
                 <FormItem>
                   <FormLabel>Your Skills</FormLabel>
                   <FormControl>
-                    <>
+                    <div className="space-y-2">
                       <div className="flex flex-wrap gap-2">
                         {field.value?.map(skill => (
                           <Badge key={skill} variant="secondary" className="text-sm py-1 pl-3 pr-2">
@@ -201,7 +201,7 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
                         placeholder="Add a skill and press Enter"
                         onKeyDown={addSkill}
                       />
-                    </>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
