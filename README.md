@@ -6,9 +6,9 @@ To get started, take a look at `src/app/page.tsx`.
 
 ## Running Locally
 
-To run this application on your local machine, follow these steps:
+After downloading the complete project folder, you can run this application on your local machine by following these steps:
 
-1.  **Install Dependencies**: Open your terminal in the project's root directory and run the following command to install all the required packages:
+1.  **Install Dependencies**: Open your command prompt or terminal, navigate to the project's root directory, and run the following command to install all the required packages:
     ```bash
     npm install
     ```
