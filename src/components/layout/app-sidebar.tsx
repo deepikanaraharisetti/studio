@@ -12,6 +12,7 @@ import {
   PlusSquare,
   User as UserIcon,
   FolderKanban,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { Badge } from '../ui/badge';
@@ -43,7 +44,7 @@ export default function AppSidebar() {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
-    { href: '/profile', icon: UserIcon, label: 'Profile' },
+    { href: `/users/${userProfile?.uid}`, icon: UserIcon, label: 'My Profile' },
   ];
 
   return (
@@ -83,3 +84,5 @@ export default function AppSidebar() {
     </aside>
   );
 }
+
+    

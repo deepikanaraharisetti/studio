@@ -55,9 +55,9 @@ export default function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link href="/profile">
+            <Link href={`/users/${userProfile.uid}`}>
               <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
+              <span>My Profile</span>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -70,3 +70,5 @@ export default function UserNav() {
     </DropdownMenu>
   );
 }
+
+    

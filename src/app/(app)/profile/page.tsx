@@ -2,21 +2,24 @@
 
 import { useAuth } from '@/providers/auth-provider';
 import ProfileForm from '@/components/profile-form';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
+// This page is now a redirector to the dynamic user profile page.
+// The actual form is still used for editing, but viewing a profile
+// is handled by /users/[uid]
 export default function ProfilePage() {
   const { userProfile } = useAuth();
+  const router = useRouter();
 
-  if (!userProfile) {
-    return null; // or a loading state
-  }
+  useEffect(() => {
+    if (userProfile?.uid) {
+      router.replace(`/users/${userProfile.uid}?edit=true`);
+    }
+  }, [userProfile, router]);
 
-  return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
-        <p className="text-muted-foreground">Manage your personal information and preferences.</p>
-      </div>
-      <ProfileForm userProfile={userProfile} />
-    </div>
-  );
+
+  return null; // or a loading state
 }
+
+    

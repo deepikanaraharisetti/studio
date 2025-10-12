@@ -1,18 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Opportunity } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ListFilter, Star } from 'lucide-react';
+import { Search, ListFilter, Star, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/providers/auth-provider';
 import { getSuggestedOpportunities } from '@/ai/ai-suggested-opportunities';
 import { mockOpportunities } from '@/lib/mock-data';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
@@ -23,6 +26,8 @@ export default function DashboardPage() {
   const [recommendedOpportunities, setRecommendedOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(true);
 
   useEffect(() => {
@@ -30,14 +35,13 @@ export default function DashboardPage() {
       setLoading(true);
       if (MOCK_AUTH) {
         setOpportunities(mockOpportunities);
-        setLoading(false);
       } else {
         const opportunitiesCollection = collection(db, 'opportunities');
         const opportunitySnapshot = await getDocs(opportunitiesCollection);
         const opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
         setOpportunities(opportunitiesList);
-        setLoading(false);
       }
+      setLoading(false);
     };
 
     fetchOpportunities();
@@ -60,7 +64,6 @@ export default function DashboardPage() {
             return opportunities.find(op => op.id === suggestion.opportunityId);
           }).filter((op): op is Opportunity => !!op);
 
-          // In mock mode, let's just recommend the first 3 if AI returns empty
           if (MOCK_AUTH && recommendedOps.length === 0) {
             setRecommendedOpportunities(opportunities.slice(0, 3));
           } else {
@@ -69,11 +72,10 @@ export default function DashboardPage() {
 
         } catch (error) {
           console.error("Error fetching recommendations:", error);
-          // Fallback for mock mode
           if (MOCK_AUTH) {
             setRecommendedOpportunities(opportunities.slice(0,3));
           } else {
-            setRecommendedOpportunities([]); // Clear recommendations on error
+            setRecommendedOpportunities([]);
           }
         } finally {
           setRecommendationsLoading(false);
@@ -88,13 +90,38 @@ export default function DashboardPage() {
     }
   }, [userProfile, opportunities, loading]);
 
-  const filteredOpportunities = opportunities.filter(op => 
-    op.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    op.requiredSkills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const allSkills = useMemo(() => {
+    const skillsSet = new Set<string>();
+    opportunities.forEach(op => op.requiredSkills.forEach(skill => skillsSet.add(skill)));
+    return Array.from(skillsSet).sort();
+  }, [opportunities]);
+
+  const allRoles = useMemo(() => {
+    const rolesSet = new Set<string>();
+    opportunities.forEach(op => op.roles.forEach(role => rolesSet.add(role)));
+    return Array.from(rolesSet).sort();
+  }, [opportunities]);
+  
+  const filteredOpportunities = opportunities.filter(op => {
+    const searchTermMatch = searchTerm === '' ||
+      op.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      op.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const skillMatch = selectedSkills.length === 0 || selectedSkills.some(s => op.requiredSkills.includes(s));
+    const roleMatch = selectedRoles.length === 0 || selectedRoles.some(r => op.roles.includes(r));
+
+    return searchTermMatch && skillMatch && roleMatch;
+  });
 
   const displayedOpportunities = filteredOpportunities.filter(op => !recommendedOpportunities.some(rec => rec.id === op.id));
+
+  const resetFilters = () => {
+    setSelectedSkills([]);
+    setSelectedRoles([]);
+    setSearchTerm('');
+  }
+  
+  const activeFilterCount = selectedSkills.length + selectedRoles.length + (searchTerm ? 1 : 0);
 
   return (
     <div className="space-y-8">
@@ -115,13 +142,49 @@ export default function DashboardPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="gap-2 h-11">
-          <ListFilter className="h-4 w-4" />
-          Filters
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2 h-11 relative">
+              <ListFilter className="h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{activeFilterCount}</Badge>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" align="end">
+            <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Filters</h4>
+                    <Button variant="ghost" size="sm" onClick={resetFilters} disabled={activeFilterCount === 0}>Reset</Button>
+                </div>
+                <div className="space-y-2">
+                    <Label>Skills</Label>
+                    <Select onValueChange={(value) => setSelectedSkills(value ? [value] : [])} value={selectedSkills[0] || ''}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a skill" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value=''>All Skills</SelectItem>
+                            {allSkills.map(skill => <SelectItem key={skill} value={skill}>{skill}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label>Roles</Label>
+                     <Select onValueChange={(value) => setSelectedRoles(value ? [value] : [])} value={selectedRoles[0] || ''}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value=''>All Roles</SelectItem>
+                            {allRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
-      {/* AI Recommendation Section */}
       {(recommendationsLoading || recommendedOpportunities.length > 0) && (
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold flex items-center gap-2 tracking-tight">
@@ -156,8 +219,8 @@ export default function DashboardPage() {
           </div>
         ) : (
           <Card className="text-center py-12">
-            <h3 className="text-lg font-medium">No other opportunities found</h3>
-            <p className="text-muted-foreground mt-2">Try adjusting your search or check back later!</p>
+            <h3 className="text-lg font-medium">No opportunities found</h3>
+            <p className="text-muted-foreground mt-2">Try adjusting your search or filters!</p>
           </Card>
         )}
       </div>
@@ -186,3 +249,5 @@ const OpportunitySkeleton = () => (
         </div>
     </Card>
 );
+
+    

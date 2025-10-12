@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
@@ -150,7 +151,9 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
         <Card>
           <CardHeader>
              <h1 className="text-3xl font-bold tracking-tight">{opportunity.title}</h1>
-             <p className="text-muted-foreground">Project posted by {opportunity.ownerName}</p>
+             <p className="text-muted-foreground">
+                Project posted by <Link href={`/users/${opportunity.ownerId}`} className="font-medium text-card-foreground hover:underline">{opportunity.ownerName}</Link>
+             </p>
           </CardHeader>
           <CardContent>
             <p className="text-base whitespace-pre-wrap leading-relaxed">{opportunity.description}</p>
@@ -167,12 +170,14 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
                     {opportunity.joinRequests.map(applicant => (
                         <div key={applicant.uid} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-4">
-                                <Avatar>
-                                    <AvatarImage src={applicant.photoURL || ''} />
-                                    <AvatarFallback>{getInitials(applicant.displayName)}</AvatarFallback>
-                                </Avatar>
+                                <Link href={`/users/${applicant.uid}`}>
+                                    <Avatar>
+                                        <AvatarImage src={applicant.photoURL || ''} />
+                                        <AvatarFallback>{getInitials(applicant.displayName)}</AvatarFallback>
+                                    </Avatar>
+                                </Link>
                                 <div>
-                                    <p className="font-semibold">{applicant.displayName}</p>
+                                    <Link href={`/users/${applicant.uid}`} className="font-semibold hover:underline">{applicant.displayName}</Link>
                                     <div className="flex flex-wrap gap-1 mt-1">
                                         {(applicant.skills || []).slice(0,3).map(skill => (
                                             <Badge key={skill} variant="secondary">{skill}</Badge>
@@ -191,18 +196,20 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
             </Card>
         )}
 
-        <Tabs defaultValue="chat" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="chat"><MessageSquare className="w-4 h-4 mr-2"/>Chat</TabsTrigger>
-                <TabsTrigger value="files"><FileText className="w-4 h-4 mr-2"/>Files</TabsTrigger>
-            </TabsList>
-            <TabsContent value="chat">
-                <OpportunityChat opportunityId={id} isMember={isMember || isOwner} />
-            </TabsContent>
-            <TabsContent value="files">
-                <OpportunityFiles opportunityId={id} isMember={isMember || isOwner} />
-            </TabsContent>
-        </Tabs>
+        {(isMember || isOwner) && (
+          <Tabs defaultValue="chat" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="chat"><MessageSquare className="w-4 h-4 mr-2"/>Chat</TabsTrigger>
+                  <TabsTrigger value="files"><FileText className="w-4 h-4 mr-2"/>Files</TabsTrigger>
+              </TabsList>
+              <TabsContent value="chat">
+                  <OpportunityChat opportunityId={id} isMember={isMember || isOwner} />
+              </TabsContent>
+              <TabsContent value="files">
+                  <OpportunityFiles opportunityId={id} isMember={isMember || isOwner} />
+              </TabsContent>
+          </Tabs>
+        )}
 
       </div>
       <div className="lg:col-span-1 space-y-6">
@@ -241,7 +248,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
             <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5"/>Team Members ({opportunity.teamMembers.length + 1})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
+            <Link href={`/users/${opportunity.ownerId}`} className="flex items-center gap-3 hover:bg-accent p-2 rounded-md">
               <Avatar>
                 <AvatarImage src={opportunity.ownerPhotoURL} />
                 <AvatarFallback>{getInitials(opportunity.ownerName)}</AvatarFallback>
@@ -250,9 +257,9 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
                 <p className="font-semibold">{opportunity.ownerName}</p>
                 <p className="text-sm text-muted-foreground">Project Owner</p>
               </div>
-            </div>
+            </Link>
             {opportunity.teamMembers.map(member => (
-              <div key={member.uid} className="flex items-center gap-3">
+              <Link href={`/users/${member.uid}`} key={member.uid} className="flex items-center gap-3 hover:bg-accent p-2 rounded-md">
                 <Avatar>
                   <AvatarImage src={member.photoURL || ''} />
                   <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
@@ -261,7 +268,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
                   <p className="font-semibold">{member.displayName}</p>
                   <p className="text-sm text-muted-foreground">Team Member</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
@@ -270,3 +277,5 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
     </div>
   );
 }
+
+    
