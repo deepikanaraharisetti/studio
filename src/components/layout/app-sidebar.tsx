@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Briefcase,
@@ -12,13 +12,11 @@ import {
   PlusSquare,
   User as UserIcon,
   FolderKanban,
-  LineChart,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { Badge } from '../ui/badge';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Opportunity } from '@/lib/types';
 
 
@@ -27,7 +25,7 @@ export default function AppSidebar() {
   const router = useRouter();
   const { userProfile } = useAuth();
 
-  const [ownedOpportunities, loading, error] = useCollection(
+  const [ownedOpportunities] = useCollection(
     userProfile ? query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid)) : null
   );
 
@@ -43,7 +41,6 @@ export default function AppSidebar() {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/analytics', icon: LineChart, label: 'Analytics' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
     { href: '/profile', icon: UserIcon, label: 'Profile' },
