@@ -1,22 +1,53 @@
 'use client';
 
-import { collection, query, where } from 'firebase/firestore';
-import { useCollection } from 'react-firebase-hooks/firestore';
+import { useEffect, useState } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Opportunity } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
 import { useAuth } from '@/providers/auth-provider';
 import LoadingSpinner from '@/components/loading-spinner';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { mockOpportunities } from '@/lib/mock-data';
+
+const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
 export default function MyProjectsPage() {
   const { userProfile } = useAuth();
+  const [opportunitiesList, setOpportunitiesList] = useState<Opportunity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   
-  const [ownedOpportunities, loading, error] = useCollection(
-    userProfile ? query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid)) : null
-  );
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      if (!userProfile) {
+        setLoading(false);
+        return;
+      }
 
-  const opportunitiesList = ownedOpportunities?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity)) || [];
+      setLoading(true);
+      setError(null);
+
+      if (MOCK_AUTH) {
+        const owned = mockOpportunities.filter(op => op.ownerId === userProfile.uid);
+        setOpportunitiesList(owned);
+        setLoading(false);
+      } else {
+        try {
+          const q = query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid));
+          const querySnapshot = await getDocs(q);
+          const opportunities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
+          setOpportunitiesList(opportunities);
+        } catch (e: any) {
+          setError(e);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchOpportunities();
+  }, [userProfile]);
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
