@@ -1,8 +1,61 @@
 
+'use client';
+
 import { Button } from '@/components/ui/button';
-import { Users, Briefcase, Zap } from 'lucide-react';
+import { Users, Briefcase, Zap, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import Autoplay from "embla-carousel-autoplay";
+import React from 'react';
+
+const featuredOpportunities = [
+    { id: '1', title: 'AI-Powered Study Buddy App', skills: ['React', 'Firebase', 'AI/ML'] },
+    { id: '2', title: 'Eco-Friendly Campus Initiative', skills: ['Marketing', 'Project Management'] },
+    { id: '3', title: 'Annual Charity Hackathon', skills: ['Event Planning', 'Node.js'] },
+    { id: '4', title: 'Short Film Production', skills: ['Video Editing', 'Storytelling'] },
+    { id: '5', title: 'Peer-to-Peer Tutoring Platform', skills: ['Full-Stack', 'PostgreSQL'] },
+];
+
+function FeaturedProjectsCarousel() {
+  const plugin = React.useRef(
+    Autoplay({ delay: 3000, stopOnInteraction: true })
+  );
+
+  return (
+    <Carousel
+      opts={{
+        align: "start",
+        loop: true,
+      }}
+      orientation="vertical"
+      plugins={[plugin.current]}
+      onMouseEnter={plugin.current.stop}
+      onMouseLeave={plugin.current.reset}
+      className="w-full max-w-md"
+    >
+      <CarouselContent className="-mt-1 h-[420px]">
+        {featuredOpportunities.map((op) => (
+          <CarouselItem key={op.id} className="pt-1 basis-1/3">
+            <div className="p-1">
+              <Card className="shadow-md hover:shadow-primary/20 hover:border-primary/50 transition-all">
+                <CardHeader>
+                  <CardTitle className="text-lg leading-tight">{op.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-2">
+                  {op.skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
+                </CardContent>
+              </Card>
+            </div>
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+    </Carousel>
+  );
+}
+
 
 export default function LandingPage() {
   return (
@@ -41,15 +94,8 @@ export default function LandingPage() {
                 </Button>
               </div>
             </div>
-            <div className="hidden md:block">
-                <Image 
-                    src="https://picsum.photos/seed/crew/600/500"
-                    alt="An animated illustration of a diverse team working together on a project"
-                    width={600}
-                    height={500}
-                    className="rounded-xl shadow-2xl"
-                    data-ai-hint="teamwork illustration"
-                />
+            <div className="hidden md:flex items-center justify-center">
+                <FeaturedProjectsCarousel />
             </div>
           </div>
         </section>
