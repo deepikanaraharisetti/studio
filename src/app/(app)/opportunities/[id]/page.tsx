@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use, Suspense } from 'react';
 import Link from 'next/link';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -21,9 +21,8 @@ import { mockOpportunities } from '@/lib/mock-data';
 
 const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
-
-export default function OpportunityDetailsPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
+  const { id } = use(paramsPromise);
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
@@ -276,6 +275,14 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
       </div>
     </div>
   );
+}
+
+export default function OpportunityDetailsPage({ params }: { params: { id: string } }) {
+    return (
+        <Suspense fallback={<LoadingSpinner fullScreen />}>
+            <OpportunityDetailsPageComponent paramsPromise={Promise.resolve(params)} />
+        </Suspense>
+    );
 }
 
     
