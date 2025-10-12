@@ -77,6 +77,7 @@ export default function CreateOpportunityForm() {
             ownerName: userProfile.displayName,
             ownerPhotoURL: userProfile.photoURL,
             teamMembers: [],
+            joinRequests: [],
             createdAt: serverTimestamp(),
         });
 

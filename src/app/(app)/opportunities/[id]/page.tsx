@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Opportunity } from '@/lib/types';
+import { Opportunity, UserProfile } from '@/lib/types';
 import { useAuth } from '@/providers/auth-provider';
 
 import LoadingSpinner from '@/components/loading-spinner';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Briefcase, FileText, MessageSquare, PlusCircle } from 'lucide-react';
+import { Users, Briefcase, FileText, MessageSquare, PlusCircle, Check, X, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
@@ -27,66 +27,119 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
   const { toast } = useToast();
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isJoining, setIsJoining] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (id) {
-      const fetchOpportunity = async () => {
-        setLoading(true);
-        if (MOCK_AUTH) {
-            const opp = mockOpportunities.find(o => o.id === id);
-            setOpportunity(opp || null);
+      if (MOCK_AUTH) {
+          const opp = mockOpportunities.find(o => o.id === id);
+          if(opp) {
+            setOpportunity({...opp, joinRequests: opp.joinRequests || []});
+          } else {
+            setOpportunity(null);
+          }
+          setLoading(false);
+          return;
+      } 
+      
+      const docRef = doc(db, 'opportunities', id);
+      const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setOpportunity({ id: docSnap.id, ...docSnap.data() } as Opportunity);
         } else {
-            const docRef = doc(db, 'opportunities', id);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-              setOpportunity({ id: docSnap.id, ...docSnap.data() } as Opportunity);
-            } else {
-              // Handle not found
-            }
+          // Handle not found
+          setOpportunity(null);
         }
         setLoading(false);
-      };
-      fetchOpportunity();
+      });
+      return () => unsubscribe();
     }
   }, [id]);
 
-  const handleJoinTeam = async () => {
+  const handleJoinRequest = async () => {
     if (!userProfile || !opportunity) return;
-    setIsJoining(true);
+    setIsSubmitting(true);
 
     if (MOCK_AUTH) {
-        // In mock mode, just update the state
-        setOpportunity(prev => prev ? { ...prev, teamMembers: [...prev.teamMembers, userProfile] } : null);
-        toast({ title: "Welcome to the team!", description: "You can now collaborate on this opportunity." });
-        setIsJoining(false);
+        setOpportunity(prev => prev ? { ...prev, joinRequests: [...(prev.joinRequests || []), userProfile] } : null);
+        toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
+        setIsSubmitting(false);
         return;
     }
 
     try {
       const opportunityRef = doc(db, 'opportunities', id);
       await updateDoc(opportunityRef, {
-        teamMembers: arrayUnion({
-          uid: userProfile.uid,
-          displayName: userProfile.displayName,
-          photoURL: userProfile.photoURL,
-        }),
+        joinRequests: arrayUnion(userProfile),
       });
-      setOpportunity(prev => prev ? { ...prev, teamMembers: [...prev.teamMembers, userProfile] } : null);
-      toast({ title: "Welcome to the team!", description: "You can now collaborate on this opportunity." });
+      toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
     } catch (error) {
-      toast({ title: "Error", description: "Could not join the team. Please try again.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not send join request. Please try again.", variant: "destructive" });
     } finally {
-      setIsJoining(false);
+      setIsSubmitting(false);
     }
   };
 
-  const isMember = opportunity?.teamMembers.some(member => member.uid === userProfile?.uid) || opportunity?.ownerId === userProfile?.uid;
+  const handleRequestAction = async (applicant: UserProfile, action: 'accept' | 'decline') => {
+    if (!userProfile || !opportunity || userProfile.uid !== opportunity.ownerId) return;
+
+    const opportunityRef = doc(db, 'opportunities', id);
+
+    if (MOCK_AUTH) {
+        if (action === 'accept') {
+            setOpportunity(prev => prev ? {
+                ...prev,
+                teamMembers: [...prev.teamMembers, applicant],
+                joinRequests: prev.joinRequests.filter(req => req.uid !== applicant.uid),
+            } : null);
+        } else {
+            setOpportunity(prev => prev ? {
+                ...prev,
+                joinRequests: prev.joinRequests.filter(req => req.uid !== applicant.uid),
+            } : null);
+        }
+        toast({title: `Request ${action}ed.`});
+        return;
+    }
+
+
+    try {
+        if (action === 'accept') {
+            await updateDoc(opportunityRef, {
+                teamMembers: arrayUnion(applicant),
+                joinRequests: arrayRemove(applicant),
+            });
+            toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
+        } else { // decline
+            await updateDoc(opportunityRef, {
+                joinRequests: arrayRemove(applicant),
+            });
+            toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
+        }
+    } catch (error) {
+        toast({ title: "Error", description: "Could not process the request. Please try again.", variant: "destructive" });
+    }
+  }
+
+  const isOwner = opportunity?.ownerId === userProfile?.uid;
+  const isMember = opportunity?.teamMembers.some(member => member.uid === userProfile?.uid);
+  const hasRequested = opportunity?.joinRequests?.some(req => req.uid === userProfile?.uid);
+  
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  const getJoinButton = () => {
+    if (isMember) return <Button className="w-full" size="lg" disabled><UserCheck className="mr-2"/>You're on the team</Button>;
+    if (hasRequested) return <Button className="w-full" size="lg" disabled variant="outline">Request Sent</Button>;
+    if (isOwner) return <Button className="w-full" size="lg" disabled variant="outline">You are the owner</Button>;
+    return (
+        <Button className="w-full" size="lg" onClick={handleJoinRequest} disabled={isSubmitting}>
+            {isSubmitting ? <LoadingSpinner /> : <> <PlusCircle className="mr-2"/> Request to Join </>}
+        </Button>
+    )
+  }
 
   if (loading) return <LoadingSpinner fullScreen />;
   if (!opportunity) return <div className="text-center py-12">Opportunity not found.</div>;
@@ -104,16 +157,50 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
           </CardContent>
         </Card>
 
+        {isOwner && (opportunity.joinRequests?.length ?? 0) > 0 && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Join Requests</CardTitle>
+                    <CardDescription>Review users who want to join your team.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {opportunity.joinRequests.map(applicant => (
+                        <div key={applicant.uid} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center gap-4">
+                                <Avatar>
+                                    <AvatarImage src={applicant.photoURL || ''} />
+                                    <AvatarFallback>{getInitials(applicant.displayName)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-semibold">{applicant.displayName}</p>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {(applicant.skills || []).slice(0,3).map(skill => (
+                                            <Badge key={skill} variant="secondary">{skill}</Badge>
+                                        ))}
+                                        {(applicant.skills?.length || 0) > 3 && <Badge variant="outline">+{(applicant.skills?.length || 0) - 3}</Badge>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button size="icon" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700" onClick={() => handleRequestAction(applicant, 'accept')}><Check className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700" onClick={() => handleRequestAction(applicant, 'decline')}><X className="w-4 h-4"/></Button>
+                            </div>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        )}
+
         <Tabs defaultValue="chat" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="chat"><MessageSquare className="w-4 h-4 mr-2"/>Chat</TabsTrigger>
                 <TabsTrigger value="files"><FileText className="w-4 h-4 mr-2"/>Files</TabsTrigger>
             </TabsList>
             <TabsContent value="chat">
-                <OpportunityChat opportunityId={id} isMember={isMember} />
+                <OpportunityChat opportunityId={id} isMember={isMember || isOwner} />
             </TabsContent>
             <TabsContent value="files">
-                <OpportunityFiles opportunityId={id} isMember={isMember} />
+                <OpportunityFiles opportunityId={id} isMember={isMember || isOwner} />
             </TabsContent>
         </Tabs>
 
@@ -121,14 +208,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
       <div className="lg:col-span-1 space-y-8">
         <Card>
           <CardContent className="p-6">
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={handleJoinTeam}
-              disabled={isMember || isJoining}
-            >
-              {isJoining ? <LoadingSpinner /> : (isMember ? "You're on the team" : <> <PlusCircle className="mr-2"/> Join Team </>)}
-            </Button>
+            {getJoinButton()}
           </CardContent>
         </Card>
 

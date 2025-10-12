@@ -20,6 +20,17 @@ const mockUser2: UserProfile = {
     interests: ['Cooking', 'Chess'],
 };
 
+const mockUser3: UserProfile = {
+    uid: 'user-3',
+    displayName: 'Charlie Brown',
+    email: 'charlie@example.com',
+    photoURL: 'https://picsum.photos/seed/avatar-man/100/100',
+    bio: 'Full-stack dev, loves a good challenge.',
+    skills: ['JavaScript', 'Go', 'Docker'],
+    interests: ['Gaming', 'Rock Climbing'],
+};
+
+
 export const mockOpportunities: Opportunity[] = [
   {
     id: 'proj-1',
@@ -31,18 +42,20 @@ export const mockOpportunities: Opportunity[] = [
     requiredSkills: ['Project Management', 'Marketing', 'Environmental Science'],
     roles: ['Project Lead', 'Marketing Coordinator', 'Research Analyst'],
     teamMembers: [mockUser1],
+    joinRequests: [mockUser3],
     createdAt: { seconds: 1672531200, nanoseconds: 0 } as any, // Mock Timestamp
   },
   {
     id: 'proj-2',
     title: 'AI-Powered Study Buddy App',
     description: 'Developing a mobile application that uses AI to create personalized study plans and tutoring sessions for students. Seeking developers and UI/UX designers to bring this idea to life.',
-    ownerId: 'owner-2',
-    ownerName: 'John Smith',
-    ownerPhotoURL: 'https://picsum.photos/seed/avatar4/100/100',
+    ownerId: 'mock-user-id', // Make the test user the owner
+    ownerName: 'Test User',
+    ownerPhotoURL: 'https://picsum.photos/seed/avatar1/100/100',
     requiredSkills: ['React Native', 'Firebase', 'UI/UX Design', 'Machine Learning'],
     roles: ['Frontend Developer', 'Backend Developer', 'UI/UX Designer'],
     teamMembers: [mockUser2, mockUser1],
+    joinRequests: [mockUser3],
     createdAt: { seconds: 1675209600, nanoseconds: 0 } as any,
   },
   {
@@ -55,6 +68,7 @@ export const mockOpportunities: Opportunity[] = [
     requiredSkills: ['Event Planning', 'Sponsorship', 'Software Development'],
     roles: ['Event Organizer', 'Sponsorship Manager', 'Mentor'],
     teamMembers: [],
+    joinRequests: [],
     createdAt: { seconds: 1677628800, nanoseconds: 0 } as any,
   },
    {
@@ -67,6 +81,7 @@ export const mockOpportunities: Opportunity[] = [
     requiredSkills: ['HTML', 'CSS', 'JavaScript', 'Web Design'],
     roles: ['Web Developer', 'UI Designer'],
     teamMembers: [mockUser1],
+    joinRequests: [],
     createdAt: { seconds: 1679443200, nanoseconds: 0 } as any,
   },
   {
@@ -79,6 +94,7 @@ export const mockOpportunities: Opportunity[] = [
     requiredSkills: ['React', 'Node.js', 'PostgreSQL', 'Product Management'],
     roles: ['Full-Stack Developer', 'Product Manager'],
     teamMembers: [mockUser2],
+    joinRequests: [],
     createdAt: { seconds: 1680307200, nanoseconds: 0 } as any,
   },
   {
@@ -91,6 +107,7 @@ export const mockOpportunities: Opportunity[] = [
     requiredSkills: ['Acting', 'Cinematography', 'Sound Design', 'Video Editing'],
     roles: ['Actor', 'Cinematographer', 'Editor'],
     teamMembers: [],
+    joinRequests: [],
     createdAt: { seconds: 1682899200, nanoseconds: 0 } as any,
   },
 ];

@@ -20,6 +20,7 @@ export interface Opportunity {
   requiredSkills: string[];
   roles: string[];
   teamMembers: UserProfile[];
+  joinRequests: UserProfile[];
   createdAt: Timestamp;
 }
 
