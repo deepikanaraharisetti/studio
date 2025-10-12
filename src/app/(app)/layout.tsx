@@ -21,7 +21,6 @@ import {
   LogOut,
   PlusSquare,
   Search,
-  User,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { usePathname } from 'next/navigation';
@@ -56,7 +55,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Explore' },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/explore', icon: Search, label: 'Explore' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
   ];
@@ -72,7 +72,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem key={item.href + item.label}>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={pathname === item.href}
                   tooltip={item.label}
                 >
                   <Link href={item.href}>
