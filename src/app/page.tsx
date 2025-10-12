@@ -94,7 +94,7 @@ export default function LandingPage() {
                 </Button>
               </div>
             </div>
-            <div className="hidden md:flex items-center justify-center">
+            <div className="hidden md:flex items-center justify-start">
                 <FeaturedProjectsCarousel />
             </div>
           </div>
