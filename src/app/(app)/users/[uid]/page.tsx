@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -19,8 +19,8 @@ import Link from 'next/link';
 
 const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
-function ProfilePageComponent({ params }: { params: { uid: string } }) {
-  const { uid } = params;
+function ProfilePageComponent({ paramsPromise }: { paramsPromise: Promise<{ uid: string }> }) {
+  const { uid } = use(paramsPromise);
   const searchParams = useSearchParams();
   const isEditMode = searchParams.get('edit') === 'true';
 
@@ -169,9 +169,7 @@ function ProfilePageComponent({ params }: { params: { uid: string } }) {
 export default function UserProfilePage({ params }: { params: { uid: string } }) {
   return (
     <Suspense fallback={<LoadingSpinner fullScreen />}>
-      <ProfilePageComponent params={params} />
+      <ProfilePageComponent paramsPromise={Promise.resolve(params)} />
     </Suspense>
   );
 }
-
-    
