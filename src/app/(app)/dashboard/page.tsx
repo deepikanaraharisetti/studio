@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/providers/auth-provider';
 import { getSuggestedOpportunities } from '@/ai/ai-suggested-opportunities';
 import { mockOpportunities } from '@/lib/mock-data';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+
 
 const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
@@ -96,10 +98,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-card border rounded-lg p-6 space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userProfile?.displayName?.split(' ')[0]}!</h1>
-        <p className="text-muted-foreground">Here’s what’s happening. Browse projects, join teams, and start collaborating.</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-3xl">Welcome back, {userProfile?.displayName?.split(' ')[0]}!</CardTitle>
+          <CardDescription>Here’s what’s happening. Browse projects, join teams, and start collaborating.</CardDescription>
+        </CardHeader>
+      </Card>
       
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -120,7 +124,7 @@ export default function DashboardPage() {
       {/* AI Recommendation Section */}
       {(recommendationsLoading || recommendedOpportunities.length > 0) && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold flex items-center gap-2">
+          <h2 className="text-2xl font-semibold flex items-center gap-2 tracking-tight">
             <Star className="text-primary" />
             Recommended For You
           </h2>
@@ -139,7 +143,7 @@ export default function DashboardPage() {
       )}
 
       <div className="space-y-4">
-        <h2 className="text-2xl font-semibold">All Opportunities</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">All Opportunities</h2>
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => <OpportunitySkeleton key={i} />)}
@@ -162,7 +166,7 @@ export default function DashboardPage() {
 }
 
 const OpportunitySkeleton = () => (
-    <div className="space-y-3 rounded-lg border bg-card p-4 transition-all duration-300">
+    <Card className="p-4 space-y-4">
         <div className="space-y-2">
             <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
@@ -178,7 +182,7 @@ const OpportunitySkeleton = () => (
                 <Skeleton className="h-8 w-8 rounded-full border-2 border-card" />
                 <Skeleton className="h-8 w-8 rounded-full border-2 border-card" />
             </div>
-            <Skeleton className="h-6 w-24 rounded-md" />
+            <Skeleton className="h-6 w-24" />
         </div>
-    </div>
+    </Card>
 );

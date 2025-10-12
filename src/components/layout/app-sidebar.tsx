@@ -30,7 +30,7 @@ export default function AppSidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-      <div className="h-20 flex items-center px-6">
+      <div className="h-16 flex items-center px-6">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Briefcase className="w-8 h-8" />
           <span className="text-2xl font-bold">CrewUp</span>

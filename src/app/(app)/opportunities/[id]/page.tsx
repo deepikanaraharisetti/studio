@@ -149,11 +149,11 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
       <div className="lg:col-span-2 space-y-8">
         <Card>
           <CardHeader>
-             <h1 className="text-3xl font-bold">{opportunity.title}</h1>
+             <h1 className="text-3xl font-bold tracking-tight">{opportunity.title}</h1>
              <p className="text-muted-foreground">Project posted by {opportunity.ownerName}</p>
           </CardHeader>
           <CardContent>
-            <p className="text-base whitespace-pre-wrap">{opportunity.description}</p>
+            <p className="text-base whitespace-pre-wrap leading-relaxed">{opportunity.description}</p>
           </CardContent>
         </Card>
 
@@ -163,7 +163,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
                     <CardTitle>Join Requests</CardTitle>
                     <CardDescription>Review users who want to join your team.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                     {opportunity.joinRequests.map(applicant => (
                         <div key={applicant.uid} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-4">
@@ -182,8 +182,8 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button size="icon" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700" onClick={() => handleRequestAction(applicant, 'accept')}><Check className="w-4 h-4"/></Button>
-                                <Button size="icon" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700" onClick={() => handleRequestAction(applicant, 'decline')}><X className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/50" onClick={() => handleRequestAction(applicant, 'accept')}><Check className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50" onClick={() => handleRequestAction(applicant, 'decline')}><X className="w-4 h-4"/></Button>
                             </div>
                         </div>
                     ))}
@@ -205,7 +205,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
         </Tabs>
 
       </div>
-      <div className="lg:col-span-1 space-y-8">
+      <div className="lg:col-span-1 space-y-6">
         <Card>
           <CardContent className="p-6">
             {getJoinButton()}
@@ -218,7 +218,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold mb-2 text-sm">Skills</h4>
+              <h4 className="font-semibold mb-2 text-sm tracking-tight">Skills</h4>
               <div className="flex flex-wrap gap-2">
                 {opportunity.requiredSkills.map(skill => (
                   <Badge key={skill} variant="secondary">{skill}</Badge>
@@ -226,7 +226,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-2 text-sm">Roles</h4>
+              <h4 className="font-semibold mb-2 text-sm tracking-tight">Roles</h4>
               <div className="flex flex-wrap gap-2">
                 {opportunity.roles.map(role => (
                   <Badge key={role}>{role}</Badge>

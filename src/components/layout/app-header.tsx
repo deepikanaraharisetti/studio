@@ -36,7 +36,7 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="flex h-20 items-center gap-4 border-b bg-card px-4 md:px-6 sticky top-0 z-30">
+    <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 sticky top-0 z-30">
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="shrink-0 md:hidden">
@@ -45,7 +45,7 @@ export default function AppHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col bg-sidebar text-sidebar-foreground p-0">
-          <div className="h-20 flex items-center px-6 border-b border-sidebar-border">
+          <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
             <Link href="/dashboard" className="flex items-center gap-2">
                 <Briefcase className="w-8 h-8" />
                 <span className="text-2xl font-bold">CrewUp</span>
