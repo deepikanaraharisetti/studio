@@ -66,10 +66,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <Briefcase className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold tracking-tighter">CrewUp</span>
-          </Link>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
