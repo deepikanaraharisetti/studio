@@ -55,7 +55,7 @@ export const mockOpportunities: Opportunity[] = [
     requiredSkills: ['React Native', 'Firebase', 'UI/UX Design', 'Machine Learning'],
     roles: ['Frontend Developer', 'Backend Developer', 'UI/UX Designer'],
     teamMembers: [mockUser2, mockUser1],
-    joinRequests: [mockUser3],
+    joinRequests: [mockUser3, mockUser2],
     createdAt: { seconds: 1675209600, nanoseconds: 0 } as any,
   },
   {
