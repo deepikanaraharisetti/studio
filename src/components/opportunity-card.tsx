@@ -1,6 +1,5 @@
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Opportunity } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +20,12 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
   return (
     <Link href={`/opportunities/${opportunity.id}`} className="block group">
       <Card className="h-full flex flex-col transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1">
-        <CardContent className="flex-grow p-4 space-y-3">
-          <CardTitle className="text-lg font-bold leading-snug group-hover:text-primary transition-colors pt-4">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold leading-snug group-hover:text-primary transition-colors">
             {opportunity.title}
           </CardTitle>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-3">
           <p className="text-sm text-muted-foreground line-clamp-2">
             {opportunity.description}
           </p>
@@ -39,15 +40,19 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
         </CardContent>
         <CardFooter className="p-4 flex justify-between items-center">
           <div className="flex items-center -space-x-2">
-            {opportunity.teamMembers.slice(0,3).map(member => (
+            <Avatar className="h-8 w-8 border-2 border-card">
+                <AvatarImage src={opportunity.ownerPhotoURL} />
+                <AvatarFallback>{getInitials(opportunity.ownerName)}</AvatarFallback>
+            </Avatar>
+            {opportunity.teamMembers.slice(0,2).map(member => (
               <Avatar key={member.uid} className="h-8 w-8 border-2 border-card">
                 <AvatarImage src={member.photoURL || ''} />
                 <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
               </Avatar>
             ))}
-             {opportunity.teamMembers.length > 3 && (
+             {opportunity.teamMembers.length > 2 && (
                 <Avatar className="h-8 w-8 border-2 border-card">
-                    <AvatarFallback>+{opportunity.teamMembers.length - 3}</AvatarFallback>
+                    <AvatarFallback>+{opportunity.teamMembers.length - 2}</AvatarFallback>
                 </Avatar>
             )}
              {opportunity.teamMembers.length === 0 && (
@@ -58,11 +63,7 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={opportunity.ownerPhotoURL} />
-              <AvatarFallback>{getInitials(opportunity.ownerName)}</AvatarFallback>
-            </Avatar>
-            <span className="text-xs text-muted-foreground">{opportunity.ownerName}</span>
+            <span className="text-xs text-muted-foreground">by {opportunity.ownerName}</span>
           </div>
         </CardFooter>
       </Card>

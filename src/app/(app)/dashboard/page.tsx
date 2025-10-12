@@ -3,17 +3,22 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Opportunity } from '@/lib/types';
+import { Opportunity, UserProfile } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ListFilter, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/providers/auth-provider';
+import { getSuggestedOpportunities } from '@/ai/ai-suggested-opportunities';
 
 export default function DashboardPage() {
+  const { userProfile } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [recommendedOpportunities, setRecommendedOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
 
   useEffect(() => {
     const fetchOpportunities = async () => {
@@ -27,6 +32,38 @@ export default function DashboardPage() {
 
     fetchOpportunities();
   }, []);
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (userProfile && opportunities.length > 0) {
+        setRecommendationsLoading(true);
+        try {
+          const profileString = `Skills: ${userProfile.skills?.join(', ') || 'none'}, Interests: ${userProfile.interests?.join(', ') || 'none'}`;
+          const opportunitiesString = JSON.stringify(opportunities.map(o => ({ id: o.id, title: o.title, description: o.description, requiredSkills: o.requiredSkills })));
+          
+          const suggestions = await getSuggestedOpportunities({
+            userProfile: profileString,
+            opportunities: opportunitiesString,
+          });
+
+          const recommendedOps = suggestions.map(suggestion => {
+            return opportunities.find(op => op.id === suggestion.opportunityId);
+          }).filter((op): op is Opportunity => !!op);
+
+          setRecommendedOpportunities(recommendedOps);
+        } catch (error) {
+          console.error("Error fetching recommendations:", error);
+          setRecommendedOpportunities([]); // Clear recommendations on error
+        } finally {
+          setRecommendationsLoading(false);
+        }
+      }
+    };
+
+    if (!loading) {
+        fetchRecommendations();
+    }
+  }, [userProfile, opportunities, loading]);
 
   const filteredOpportunities = opportunities.filter(op => 
     op.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,21 +94,28 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* AI Recommendation Section Placeholder */}
+      {/* AI Recommendation Section */}
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold flex items-center gap-2">
           <Star className="text-accent" />
           Recommended For You
         </h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <OpportunitySkeleton key={i} />)
-          ) : (
-            filteredOpportunities.slice(0, 3).map(opportunity => (
+        {recommendationsLoading ? (
+           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+             {Array.from({ length: 3 }).map((_, i) => <OpportunitySkeleton key={i} />)}
+           </div>
+        ) : recommendedOpportunities.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {recommendedOpportunities.map(opportunity => (
               <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 bg-card rounded-lg">
+            <h3 className="text-lg font-medium">No recommendations for you yet</h3>
+            <p className="text-muted-foreground">Complete your profile to get better suggestions.</p>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -99,11 +143,11 @@ export default function DashboardPage() {
 
 const OpportunitySkeleton = () => (
     <div className="space-y-4 rounded-lg border bg-card p-4">
-        <Skeleton className="h-40 w-full rounded-md" />
         <div className="space-y-2">
             <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
         </div>
+        <Skeleton className="h-10 w-full" />
         <div className="flex flex-wrap gap-2">
             <Skeleton className="h-6 w-16 rounded-full" />
             <Skeleton className="h-6 w-20 rounded-full" />
@@ -114,4 +158,4 @@ const OpportunitySkeleton = () => (
             <Skeleton className="h-8 w-24 rounded-md" />
         </div>
     </div>
-)
+);
