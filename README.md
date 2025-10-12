@@ -10,7 +10,7 @@ To run this application on your local machine, please follow these step-by-step 
 
 ### Step 1: Download the Complete Project
 
-Ensure you have downloaded the **entire project folder**. The project relies on configuration files located in the root directory.
+Ensure you have downloaded the **entire project folder**. The project relies on configuration files located in the root directory, so the `src` folder alone is not enough.
 
 ### Step 2: Open Your Command Prompt or Terminal
 
