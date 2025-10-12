@@ -18,6 +18,13 @@ interface OpportunityChatProps {
   opportunityId: string;
   isMember: boolean;
 }
+const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
+
+const mockMessages: ChatMessage[] = [
+    { id: '1', text: 'Hey everyone, excited to get started!', senderId: 'user-1', senderName: 'Alice Johnson', senderPhotoURL: 'https://picsum.photos/seed/avatar2/100/100', createdAt: { toDate: () => new Date(Date.now() - 1000 * 60 * 15) } as any },
+    { id: '2', text: 'Welcome, Alice! I just pushed the initial designs to the file share.', senderId: 'owner-1', senderName: 'Jane Doe', senderPhotoURL: 'https://picsum.photos/seed/avatar1/100/100', createdAt: { toDate: () => new Date(Date.now() - 1000 * 60 * 10) } as any },
+    { id: '3', text: 'Great, I will take a look!', senderId: 'user-1', senderName: 'Alice Johnson', senderPhotoURL: 'https://picsum.photos/seed/avatar2/100/100', createdAt: { toDate: () => new Date(Date.now() - 1000 * 60 * 5) } as any },
+];
 
 export default function OpportunityChat({ opportunityId, isMember }: OpportunityChatProps) {
   const { userProfile } = useAuth();
@@ -27,6 +34,11 @@ export default function OpportunityChat({ opportunityId, isMember }: Opportunity
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (MOCK_AUTH) {
+        setMessages(mockMessages);
+        setLoading(false);
+        return;
+    }
     const messagesCol = collection(db, 'opportunities', opportunityId, 'messages');
     const q = query(messagesCol, orderBy('createdAt', 'asc'));
 
@@ -52,13 +64,20 @@ export default function OpportunityChat({ opportunityId, isMember }: Opportunity
     e.preventDefault();
     if (!newMessage.trim() || !userProfile) return;
 
-    await addDoc(collection(db, 'opportunities', opportunityId, 'messages'), {
+    const messageData = {
       text: newMessage,
       senderId: userProfile.uid,
       senderName: userProfile.displayName,
       senderPhotoURL: userProfile.photoURL,
       createdAt: serverTimestamp(),
-    });
+    };
+
+    if (MOCK_AUTH) {
+        const mockMessage = { ...messageData, id: String(Date.now()), createdAt: { toDate: () => new Date() } as any };
+        setMessages(prev => [...prev, mockMessage]);
+    } else {
+        await addDoc(collection(db, 'opportunities', opportunityId, 'messages'), messageData);
+    }
 
     setNewMessage('');
   };

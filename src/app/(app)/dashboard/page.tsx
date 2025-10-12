@@ -11,6 +11,9 @@ import { Search, ListFilter, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/providers/auth-provider';
 import { getSuggestedOpportunities } from '@/ai/ai-suggested-opportunities';
+import { mockOpportunities } from '@/lib/mock-data';
+
+const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
 export default function DashboardPage() {
   const { userProfile } = useAuth();
@@ -23,11 +26,16 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchOpportunities = async () => {
       setLoading(true);
-      const opportunitiesCollection = collection(db, 'opportunities');
-      const opportunitySnapshot = await getDocs(opportunitiesCollection);
-      const opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
-      setOpportunities(opportunitiesList);
-      setLoading(false);
+      if (MOCK_AUTH) {
+        setOpportunities(mockOpportunities);
+        setLoading(false);
+      } else {
+        const opportunitiesCollection = collection(db, 'opportunities');
+        const opportunitySnapshot = await getDocs(opportunitiesCollection);
+        const opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
+        setOpportunities(opportunitiesList);
+        setLoading(false);
+      }
     };
 
     fetchOpportunities();
@@ -50,10 +58,21 @@ export default function DashboardPage() {
             return opportunities.find(op => op.id === suggestion.opportunityId);
           }).filter((op): op is Opportunity => !!op);
 
-          setRecommendedOpportunities(recommendedOps);
+          // In mock mode, let's just recommend the first 3 if AI returns empty
+          if (MOCK_AUTH && recommendedOps.length === 0) {
+            setRecommendedOpportunities(opportunities.slice(0, 3));
+          } else {
+            setRecommendedOpportunities(recommendedOps);
+          }
+
         } catch (error) {
           console.error("Error fetching recommendations:", error);
-          setRecommendedOpportunities([]); // Clear recommendations on error
+          // Fallback for mock mode
+          if (MOCK_AUTH) {
+            setRecommendedOpportunities(opportunities.slice(0,3));
+          } else {
+            setRecommendedOpportunities([]); // Clear recommendations on error
+          }
         } finally {
           setRecommendationsLoading(false);
         }
@@ -72,6 +91,8 @@ export default function DashboardPage() {
     op.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.requiredSkills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const displayedOpportunities = filteredOpportunities.filter(op => !recommendedOpportunities.some(rec => rec.id === op.id));
 
   return (
     <div className="space-y-8">
@@ -123,15 +144,15 @@ export default function DashboardPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => <OpportunitySkeleton key={i} />)}
           </div>
-        ) : filteredOpportunities.length > 0 ? (
+        ) : displayedOpportunities.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredOpportunities.map(opportunity => (
+            {displayedOpportunities.map(opportunity => (
               <OpportunityCard key={opportunity.id} opportunity={opportunity} />
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-card rounded-lg border">
-            <h3 className="text-lg font-medium">No opportunities found</h3>
+            <h3 className="text-lg font-medium">No other opportunities found</h3>
             <p className="text-muted-foreground">Try adjusting your search or check back later!</p>
           </div>
         )}

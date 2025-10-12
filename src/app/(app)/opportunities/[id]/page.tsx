@@ -16,6 +16,9 @@ import { Users, Briefcase, FileText, MessageSquare, PlusCircle } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
+import { mockOpportunities } from '@/lib/mock-data';
+
+const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
 
 export default function OpportunityDetailsPage({ params }: { params: { id: string } }) {
@@ -30,12 +33,17 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
     if (id) {
       const fetchOpportunity = async () => {
         setLoading(true);
-        const docRef = doc(db, 'opportunities', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setOpportunity({ id: docSnap.id, ...docSnap.data() } as Opportunity);
+        if (MOCK_AUTH) {
+            const opp = mockOpportunities.find(o => o.id === id);
+            setOpportunity(opp || null);
         } else {
-          // Handle not found
+            const docRef = doc(db, 'opportunities', id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              setOpportunity({ id: docSnap.id, ...docSnap.data() } as Opportunity);
+            } else {
+              // Handle not found
+            }
         }
         setLoading(false);
       };
@@ -46,6 +54,15 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
   const handleJoinTeam = async () => {
     if (!userProfile || !opportunity) return;
     setIsJoining(true);
+
+    if (MOCK_AUTH) {
+        // In mock mode, just update the state
+        setOpportunity(prev => prev ? { ...prev, teamMembers: [...prev.teamMembers, userProfile] } : null);
+        toast({ title: "Welcome to the team!", description: "You can now collaborate on this opportunity." });
+        setIsJoining(false);
+        return;
+    }
+
     try {
       const opportunityRef = doc(db, 'opportunities', id);
       await updateDoc(opportunityRef, {
