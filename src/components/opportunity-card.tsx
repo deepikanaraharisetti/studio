@@ -18,7 +18,7 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
 
   return (
     <Link href={`/opportunities/${opportunity.id}`} className="block group">
-      <Card className="h-full flex flex-col transition-all duration-300 group-hover:shadow-xl group-hover:border-primary/50">
+      <Card className="h-full flex flex-col transition-all duration-300 group-hover:shadow-lg group-hover:border-primary/50 group-hover:-translate-y-1">
         <CardHeader>
           <CardTitle className="text-lg font-semibold leading-snug group-hover:text-primary">
             {opportunity.title}
@@ -55,7 +55,7 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
               </Avatar>
             ))}
              {opportunity.teamMembers.length > 2 && (
-                <Avatar className="h-8 w-8 border-2 border-card bg-muted-foreground text-background">
+                <Avatar className="h-8 w-8 border-2 border-card bg-muted-foreground/80 text-background">
                     <AvatarFallback className="text-xs font-semibold">+{opportunity.teamMembers.length - 2}</AvatarFallback>
                 </Avatar>
             )}

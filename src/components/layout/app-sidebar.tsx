@@ -59,14 +59,14 @@ export default function AppSidebar() {
         {navItems.map((item) => (
           <Button
             key={item.href}
-            variant={pathname.startsWith(item.href) ? 'sidebar-secondary' as any : 'ghost'}
+            variant={(pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))) ? 'sidebar-secondary' as any : 'ghost'}
             className="w-full justify-start gap-3 text-base h-12 relative"
             asChild
           >
             <Link href={item.href}>
               <item.icon className="w-5 h-5" />
               {item.label}
-              {item.badge && <Badge className="absolute right-4">{item.badge}</Badge>}
+              {item.badge && <Badge variant="destructive" className="absolute right-4">{item.badge}</Badge>}
             </Link>
           </Button>
         ))}

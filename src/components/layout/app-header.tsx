@@ -55,7 +55,7 @@ export default function AppHeader() {
 
 
   return (
-    <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 sticky top-0 z-30">
+    <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6 sticky top-0 z-30">
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="shrink-0 md:hidden">
@@ -102,9 +102,11 @@ export default function AppHeader() {
       <div className="flex-1 md:hidden">
          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
           <Briefcase className="w-6 h-6 text-primary" />
-          CrewUp
+          <span className="sr-only">CrewUp</span>
         </Link>
       </div>
+
+      <div className='flex-1' />
 
       <UserNav />
     </header>

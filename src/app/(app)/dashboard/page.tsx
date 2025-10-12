@@ -98,10 +98,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <Card>
+      <Card className="bg-primary text-primary-foreground border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl">Welcome back, {userProfile?.displayName?.split(' ')[0]}!</CardTitle>
-          <CardDescription>Here’s what’s happening. Browse projects, join teams, and start collaborating.</CardDescription>
+          <CardDescription className="text-primary-foreground/80">Here’s what’s happening. Browse projects, join teams, and start collaborating.</CardDescription>
         </CardHeader>
       </Card>
       
@@ -110,12 +110,12 @@ export default function DashboardPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
             placeholder="Search by title, skill, or keyword..." 
-            className="pl-10"
+            className="pl-10 h-11"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2 h-11">
           <ListFilter className="h-4 w-4" />
           Filters
         </Button>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
       {(recommendationsLoading || recommendedOpportunities.length > 0) && (
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold flex items-center gap-2 tracking-tight">
-            <Star className="text-primary" />
+            <Star className="text-amber-500 fill-amber-400" />
             Recommended For You
           </h2>
           {recommendationsLoading ? (
@@ -155,10 +155,10 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-card rounded-lg border">
+          <Card className="text-center py-12">
             <h3 className="text-lg font-medium">No other opportunities found</h3>
-            <p className="text-muted-foreground">Try adjusting your search or check back later!</p>
-          </div>
+            <p className="text-muted-foreground mt-2">Try adjusting your search or check back later!</p>
+          </Card>
         )}
       </div>
     </div>
@@ -182,7 +182,7 @@ const OpportunitySkeleton = () => (
                 <Skeleton className="h-8 w-8 rounded-full border-2 border-card" />
                 <Skeleton className="h-8 w-8 rounded-full border-2 border-card" />
             </div>
-            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-8 w-24" />
         </div>
     </Card>
 );
