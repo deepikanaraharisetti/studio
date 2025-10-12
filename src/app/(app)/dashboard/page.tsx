@@ -16,6 +16,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 
 const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
@@ -158,24 +159,24 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-2">
                     <Label>Skills</Label>
-                    <Select onValueChange={(value) => setSelectedSkills(value ? [value] : [])} value={selectedSkills[0] || ''}>
+                    <Select onValueChange={(value) => setSelectedSkills(value === 'all' ? [] : [value])} value={selectedSkills[0] || 'all'}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a skill" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value=''>All Skills</SelectItem>
+                            <SelectItem value='all'>All Skills</SelectItem>
                             {allSkills.map(skill => <SelectItem key={skill} value={skill}>{skill}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
                     <Label>Roles</Label>
-                     <Select onValueChange={(value) => setSelectedRoles(value ? [value] : [])} value={selectedRoles[0] || ''}>
+                     <Select onValueChange={(value) => setSelectedRoles(value === 'all' ? [] : [value])} value={selectedRoles[0] || 'all'}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value=''>All Roles</SelectItem>
+                            <SelectItem value='all'>All Roles</SelectItem>
                             {allRoles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
                         </SelectContent>
                     </Select>
@@ -249,5 +250,3 @@ const OpportunitySkeleton = () => (
         </div>
     </Card>
 );
-
-    
