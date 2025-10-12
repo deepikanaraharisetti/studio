@@ -10,6 +10,7 @@ import {
   User as UserIcon,
   FolderKanban,
   Bell,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -119,7 +120,8 @@ export default function AppHeader() {
   };
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Explore' },
+    { href: '/dashboard', icon: Search, label: 'Explore Opportunities' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
     { href: '/profile', icon: UserIcon, label: 'Profile' },
@@ -145,7 +147,7 @@ export default function AppHeader() {
           <nav className="flex-1 grid gap-2 p-4">
             {navItems.map((item) => (
                 <Button
-                    key={item.href}
+                    key={item.href + item.label}
                     variant={pathname.startsWith(item.href) ? 'sidebar-secondary' as any : 'ghost'}
                     className="w-full justify-start gap-3 text-base h-12 rounded-lg"
                     asChild

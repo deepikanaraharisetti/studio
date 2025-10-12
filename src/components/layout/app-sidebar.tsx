@@ -12,7 +12,7 @@ import {
   PlusSquare,
   User as UserIcon,
   FolderKanban,
-  Users,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { Badge } from '../ui/badge';
@@ -41,7 +41,8 @@ export default function AppSidebar() {
   };
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Explore' },
+    { href: '/dashboard', icon: Search, label: 'Explore Opportunities' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
     { href: `/users/${userProfile?.uid}`, icon: UserIcon, label: 'My Profile' },
@@ -58,8 +59,8 @@ export default function AppSidebar() {
       <nav className="flex-1 px-4 py-2 space-y-2">
         {navItems.map((item) => (
           <Button
-            key={item.href}
-            variant={(pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))) ? 'sidebar-secondary' as any : 'ghost'}
+            key={item.href + item.label}
+            variant={(pathname === item.href || (item.label !== 'Explore' && pathname.startsWith(item.href))) ? 'sidebar-secondary' as any : 'ghost'}
             className="w-full justify-start gap-3 text-base h-12 rounded-lg"
             asChild
           >
@@ -84,5 +85,3 @@ export default function AppSidebar() {
     </aside>
   );
 }
-
-    
