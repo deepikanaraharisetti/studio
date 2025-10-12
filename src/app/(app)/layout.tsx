@@ -1,41 +1,112 @@
 'use client';
 
-import { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/providers/auth-provider';
-import AppSidebar from '@/components/layout/app-sidebar';
+import { useRouter } from 'next/navigation';
 import AppHeader from '@/components/layout/app-header';
-import LoadingSpinner from '@/components/loading-spinner';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+  SidebarInset,
+} from '@/components/ui/sidebar';
+import Link from 'next/link';
+import {
+  Briefcase,
+  FolderKanban,
+  LayoutDashboard,
+  LogOut,
+  PlusSquare,
+  Search,
+  User,
+} from 'lucide-react';
+import { useAuth } from '@/providers/auth-provider';
+import { usePathname } from 'next/navigation';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Opportunity } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  const { userProfile } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
-  useEffect(() => {
-    // If loading is finished and there's no user, redirect to login.
-    // This effect runs when `loading` or `user` state changes.
-    if (!loading && !user && pathname !== '/login') {
-      router.replace('/login');
-    }
-  }, [user, loading, router, pathname]);
-  
-  // While checking for user, show a loading screen.
-  // Or if there's no user yet, also show loading to prevent flashing of content.
-  if (loading || !user) {
-    return <LoadingSpinner fullScreen />;
-  }
+  const [ownedOpportunities] = useCollection(
+    userProfile
+      ? query(collection(db, 'opportunities'), where('ownerId', '==', userProfile.uid))
+      : null
+  );
 
-  // If user is authenticated, render the app layout.
+  const totalJoinRequests =
+    ownedOpportunities?.docs.reduce((acc, doc) => {
+      const opportunity = doc.data() as Opportunity;
+      return acc + (opportunity.joinRequests?.length || 0);
+    }, 0) || 0;
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
+  const navItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Explore' },
+    { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
+    { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
+    { href: `/users/${userProfile?.uid}`, icon: User, label: 'My Profile' },
+  ];
+
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <AppSidebar />
-      <div className="flex flex-col flex-1">
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <Briefcase className="w-8 h-8 text-primary" />
+            <span className="text-2xl font-bold tracking-tighter">CrewUp</span>
+          </Link>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.href + item.label}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith(item.href)}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                    {item.badge && <Badge variant="destructive" className="ml-auto group-data-[collapsible=icon]:hidden">{item.badge}</Badge>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+                        <LogOut />
+                        <span>Logout</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
         <AppHeader />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-muted/40">
           {children}
         </main>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
