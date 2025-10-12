@@ -56,20 +56,22 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
     }
   };
 
-  const addSkill = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleArrayInput = (e: KeyboardEvent<HTMLInputElement>, field: 'skills' | 'interests') => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const skillInput = e.currentTarget;
-      const newSkill = skillInput.value.trim();
-      if (newSkill && !form.getValues('skills').includes(newSkill)) {
-        form.setValue('skills', [...form.getValues('skills'), newSkill]);
-        skillInput.value = '';
+      const input = e.currentTarget;
+      const newValue = input.value.trim();
+      const currentValues = form.getValues(field) || [];
+      if (newValue && !currentValues.includes(newValue)) {
+        form.setValue(field, [...currentValues, newValue]);
+        input.value = '';
       }
     }
   };
 
-  const removeSkill = (skillToRemove: string) => {
-    form.setValue('skills', form.getValues('skills').filter(skill => skill !== skillToRemove));
+  const removeFromArray = (valueToRemove: string, field: 'skills' | 'interests') => {
+    const currentValues = form.getValues(field) || [];
+    form.setValue(field, currentValues.filter(value => value !== valueToRemove));
   };
 
 
@@ -176,9 +178,9 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
 
         <Card>
           <CardHeader>
-            <CardTitle>Skills</CardTitle>
+            <CardTitle>Professional Details</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <FormField
               control={form.control}
               name="skills"
@@ -191,7 +193,7 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
                         {field.value?.map(skill => (
                           <Badge key={skill} variant="secondary" className="text-sm py-1 pl-3 pr-2">
                             {skill}
-                            <button type="button" onClick={() => removeSkill(skill)} className="ml-2 rounded-full hover:bg-destructive/20 p-0.5">
+                            <button type="button" onClick={() => removeFromArray(skill, 'skills')} className="ml-2 rounded-full hover:bg-destructive/20 p-0.5">
                               <X className="h-3 w-3" />
                             </button>
                           </Badge>
@@ -199,7 +201,35 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
                       </div>
                       <Input
                         placeholder="Add a skill and press Enter"
-                        onKeyDown={addSkill}
+                        onKeyDown={(e) => handleArrayInput(e, 'skills')}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="interests"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Interests</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {field.value?.map(interest => (
+                          <Badge key={interest} variant="secondary" className="text-sm py-1 pl-3 pr-2">
+                            {interest}
+                            <button type="button" onClick={() => removeFromArray(interest, 'interests')} className="ml-2 rounded-full hover:bg-destructive/20 p-0.5">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <Input
+                        placeholder="Add an interest and press Enter"
+                        onKeyDown={(e) => handleArrayInput(e, 'interests')}
                       />
                     </div>
                   </FormControl>

@@ -10,9 +10,9 @@ import LoadingSpinner from '@/components/loading-spinner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Briefcase, FileText, MessageSquare } from 'lucide-react';
+import { Users, Briefcase, FileText, MessageSquare, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
@@ -56,7 +56,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
         }),
       });
       setOpportunity(prev => prev ? { ...prev, teamMembers: [...prev.teamMembers, userProfile] } : null);
-      toast({ title: "Welcome!", description: "You've successfully joined the team." });
+      toast({ title: "Welcome to the team!", description: "You can now collaborate on this opportunity." });
     } catch (error) {
       toast({ title: "Error", description: "Could not join the team. Please try again.", variant: "destructive" });
     } finally {
@@ -64,7 +64,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
     }
   };
 
-  const isMember = opportunity?.teamMembers.some(member => member.uid === userProfile?.uid);
+  const isMember = opportunity?.teamMembers.some(member => member.uid === userProfile?.uid) || opportunity?.ownerId === userProfile?.uid;
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
@@ -72,46 +72,47 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
 
 
   if (loading) return <LoadingSpinner fullScreen />;
-  if (!opportunity) return <div>Opportunity not found.</div>;
+  if (!opportunity) return <div className="text-center py-12">Opportunity not found.</div>;
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-8">
         <Card>
-          <CardContent className="p-6">
-            <h1 className="text-3xl font-bold mb-2">{opportunity.title}</h1>
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-6">
-              <p>by {opportunity.ownerName}</p>
-            </div>
+          <CardHeader>
+             <h1 className="text-3xl font-bold">{opportunity.title}</h1>
+             <p className="text-muted-foreground">Project posted by {opportunity.ownerName}</p>
+          </CardHeader>
+          <CardContent>
             <p className="text-base whitespace-pre-wrap">{opportunity.description}</p>
           </CardContent>
         </Card>
 
         <Tabs defaultValue="chat" className="w-full">
-            <TabsList>
+            <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="chat"><MessageSquare className="w-4 h-4 mr-2"/>Chat</TabsTrigger>
                 <TabsTrigger value="files"><FileText className="w-4 h-4 mr-2"/>Files</TabsTrigger>
             </TabsList>
             <TabsContent value="chat">
-                <OpportunityChat opportunityId={id} isMember={isMember || opportunity.ownerId === userProfile?.uid} />
+                <OpportunityChat opportunityId={id} isMember={isMember} />
             </TabsContent>
             <TabsContent value="files">
-                <OpportunityFiles opportunityId={id} isMember={isMember || opportunity.ownerId === userProfile?.uid} />
+                <OpportunityFiles opportunityId={id} isMember={isMember} />
             </TabsContent>
         </Tabs>
 
       </div>
       <div className="lg:col-span-1 space-y-8">
         <Card>
-          <CardHeader>
+          <CardContent className="p-6">
             <Button
               className="w-full"
+              size="lg"
               onClick={handleJoinTeam}
-              disabled={isMember || isJoining || opportunity.ownerId === userProfile?.uid}
+              disabled={isMember || isJoining}
             >
-              {isJoining ? <LoadingSpinner className="h-4 w-4"/> : (isMember ? "You're on the team" : "Join Team")}
+              {isJoining ? <LoadingSpinner /> : (isMember ? "You're on the team" : <> <PlusCircle className="mr-2"/> Join Team </>)}
             </Button>
-          </CardHeader>
+          </CardContent>
         </Card>
 
         <Card>
@@ -120,7 +121,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold mb-2">Skills</h4>
+              <h4 className="font-semibold mb-2 text-sm">Skills</h4>
               <div className="flex flex-wrap gap-2">
                 {opportunity.requiredSkills.map(skill => (
                   <Badge key={skill} variant="secondary">{skill}</Badge>
@@ -128,7 +129,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Roles</h4>
+              <h4 className="font-semibold mb-2 text-sm">Roles</h4>
               <div className="flex flex-wrap gap-2">
                 {opportunity.roles.map(role => (
                   <Badge key={role}>{role}</Badge>

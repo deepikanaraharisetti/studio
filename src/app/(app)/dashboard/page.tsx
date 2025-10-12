@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Opportunity, UserProfile } from '@/lib/types';
+import { Opportunity } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,8 @@ export default function DashboardPage() {
         } finally {
           setRecommendationsLoading(false);
         }
+      } else if (opportunities.length > 0) {
+        setRecommendationsLoading(false);
       }
     };
 
@@ -73,9 +75,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Discover Opportunities</h1>
-        <p className="text-muted-foreground">Browse projects, join teams, and start collaborating.</p>
+      <div className="bg-card border rounded-lg p-6 space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back, {userProfile?.displayName?.split(' ')[0]}!</h1>
+        <p className="text-muted-foreground">Here’s what’s happening. Browse projects, join teams, and start collaborating.</p>
       </div>
       
       <div className="flex flex-col sm:flex-row gap-4">
@@ -95,28 +97,25 @@ export default function DashboardPage() {
       </div>
 
       {/* AI Recommendation Section */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold flex items-center gap-2">
-          <Star className="text-accent" />
-          Recommended For You
-        </h2>
-        {recommendationsLoading ? (
-           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-             {Array.from({ length: 3 }).map((_, i) => <OpportunitySkeleton key={i} />)}
-           </div>
-        ) : recommendedOpportunities.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {recommendedOpportunities.map(opportunity => (
-              <OpportunityCard key={opportunity.id} opportunity={opportunity} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 bg-card rounded-lg">
-            <h3 className="text-lg font-medium">No recommendations for you yet</h3>
-            <p className="text-muted-foreground">Complete your profile to get better suggestions.</p>
-          </div>
-        )}
-      </div>
+      {(recommendationsLoading || recommendedOpportunities.length > 0) && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold flex items-center gap-2">
+            <Star className="text-primary" />
+            Recommended For You
+          </h2>
+          {recommendationsLoading ? (
+             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+               {Array.from({ length: 3 }).map((_, i) => <OpportunitySkeleton key={i} />)}
+             </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {recommendedOpportunities.map(opportunity => (
+                <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">All Opportunities</h2>
@@ -131,7 +130,7 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
+          <div className="text-center py-12 bg-card rounded-lg border">
             <h3 className="text-lg font-medium">No opportunities found</h3>
             <p className="text-muted-foreground">Try adjusting your search or check back later!</p>
           </div>
@@ -142,9 +141,9 @@ export default function DashboardPage() {
 }
 
 const OpportunitySkeleton = () => (
-    <div className="space-y-4 rounded-lg border bg-card p-4">
+    <div className="space-y-3 rounded-lg border bg-card p-4 transition-all duration-300">
         <div className="space-y-2">
-            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
         </div>
         <Skeleton className="h-10 w-full" />
@@ -154,8 +153,11 @@ const OpportunitySkeleton = () => (
             <Skeleton className="h-6 w-12 rounded-full" />
         </div>
         <div className="flex items-center justify-between pt-2">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <Skeleton className="h-8 w-24 rounded-md" />
+            <div className="flex items-center -space-x-2">
+                <Skeleton className="h-8 w-8 rounded-full border-2 border-card" />
+                <Skeleton className="h-8 w-8 rounded-full border-2 border-card" />
+            </div>
+            <Skeleton className="h-6 w-24 rounded-md" />
         </div>
     </div>
 );

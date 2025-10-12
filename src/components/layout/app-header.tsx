@@ -35,14 +35,6 @@ export default function AppHeader() {
     router.push('/login');
   };
 
-  const getPageTitle = () => {
-    if (pathname.startsWith('/dashboard')) return 'Dashboard';
-    if (pathname.startsWith('/opportunities/create')) return 'Create Opportunity';
-    if (pathname.startsWith('/opportunities/')) return 'Opportunity Details';
-    if (pathname.startsWith('/profile')) return 'My Profile';
-    return 'CrewUp';
-  };
-
   return (
     <header className="flex h-20 items-center gap-4 border-b bg-card px-4 md:px-6 sticky top-0 z-30">
       <Sheet>
@@ -63,7 +55,7 @@ export default function AppHeader() {
             {navItems.map((item) => (
                 <Button
                     key={item.href}
-                    variant={pathname.startsWith(item.href) ? 'secondary' : 'ghost'}
+                    variant={pathname.startsWith(item.href) ? 'sidebar-secondary' as any : 'ghost'}
                     className="w-full justify-start gap-3 text-base h-12"
                     asChild
                 >
@@ -87,8 +79,11 @@ export default function AppHeader() {
         </SheetContent>
       </Sheet>
 
-      <div className="flex-1">
-        <h1 className="font-semibold text-xl">{getPageTitle()}</h1>
+      <div className="flex-1 md:hidden">
+         <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
+          <Briefcase className="w-6 h-6 text-primary" />
+          CrewUp
+        </Link>
       </div>
 
       <UserNav />

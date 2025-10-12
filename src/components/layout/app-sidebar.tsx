@@ -12,7 +12,6 @@ import {
   PlusSquare,
   User as UserIcon,
 } from 'lucide-react';
-import { useAuth } from '@/providers/auth-provider';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -23,7 +22,6 @@ const navItems = [
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { userProfile } = useAuth();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -32,7 +30,7 @@ export default function AppSidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-      <div className="h-20 flex items-center px-6 border-b border-sidebar-border">
+      <div className="h-20 flex items-center px-6">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Briefcase className="w-8 h-8" />
           <span className="text-2xl font-bold">CrewUp</span>
@@ -42,7 +40,7 @@ export default function AppSidebar() {
         {navItems.map((item) => (
           <Button
             key={item.href}
-            variant={pathname.startsWith(item.href) ? 'secondary' : 'ghost'}
+            variant={pathname.startsWith(item.href) ? 'sidebar-secondary' as any : 'ghost'}
             className="w-full justify-start gap-3 text-base h-12"
             asChild
           >
