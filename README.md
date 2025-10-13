@@ -1,3 +1,4 @@
+
 # Firebase Studio
 
 This is a Next.js starter project for Firebase Studio. It's a talent and project discovery platform called "CrewUp".

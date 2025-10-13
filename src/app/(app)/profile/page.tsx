@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/providers/auth-provider';
@@ -21,5 +22,3 @@ export default function ProfilePage() {
 
   return null; // or a loading state
 }
-
-    

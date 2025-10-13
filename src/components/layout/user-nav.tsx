@@ -1,3 +1,4 @@
+
 'use client';
 
 import { signOut } from 'firebase/auth';
@@ -70,5 +71,3 @@ export default function UserNav() {
     </DropdownMenu>
   );
 }
-
-    

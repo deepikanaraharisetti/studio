@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Opportunity, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -91,5 +92,3 @@ export default function OpportunityCard({ opportunity }: OpportunityCardProps) {
     </Card>
   );
 }
-
-    

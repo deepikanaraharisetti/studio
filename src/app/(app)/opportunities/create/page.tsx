@@ -1,3 +1,4 @@
+
 import CreateOpportunityForm from "@/components/create-opportunity-form";
 
 export default function CreateOpportunityPage() {
