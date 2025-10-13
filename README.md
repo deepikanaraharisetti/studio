@@ -5,6 +5,10 @@ This is a Next.js starter project for Firebase Studio. It's a talent and project
 
 To get started, take a look at `src/app/page.tsx`.
 
+### A Note for Beginners: Where is the HTML?
+
+If you're new to modern web development, you might be looking for an `index.html` file. This project is built with Next.js, a React framework that generates web pages dynamically. Instead of static `.html` files, pages are created from TypeScript files (ending in `.tsx`) located in the `src/app` directory. The development server you'll run in the steps below handles the process of turning this code into a viewable website in your browser.
+
 ## Running Locally
 
 To run this application on your local machine, please follow these step-by-step instructions.
