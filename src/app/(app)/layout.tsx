@@ -22,6 +22,7 @@ import {
   LogOut,
   PlusSquare,
   Search,
+  User,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { usePathname } from 'next/navigation';
@@ -60,6 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/explore', icon: Search, label: 'Explore' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
+    { href: userProfile ? `/users/${userProfile.uid}` : '/profile', icon: User, label: 'My Profile' },
   ];
 
   return (
