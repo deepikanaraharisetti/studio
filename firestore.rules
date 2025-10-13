@@ -1,45 +1,29 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // Users Collection
-    // - Allow users to create their own profile
-    // - Allow users to read/update their own profile
-    // - Allow any authenticated user to read other user profiles (for viewing profiles)
+    // Users can read any profile, but only write to their own.
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if false; // Disallow deleting user profiles
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Opportunities Collection
-    // - Allow any authenticated user to read all opportunities
-    // - Allow authenticated users to create new opportunities
-    // - Allow the owner to update their own opportunity
+    // Opportunities can be read by any authenticated user.
+    // Creation, update, and deletion are restricted.
     match /opportunities/{opportunityId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if isOwner(request.resource.data.ownerId);
-      allow delete: if isOwner(resource.data.ownerId);
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow delete: if false; // Deleting opportunities is disabled
 
-      // Messages (Chat) Subcollection
-      // - Allow team members (owner included) to read and write messages
+      // Team members and the owner can access chat and files.
       match /messages/{messageId} {
-        allow read, write: if get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.teamMembers.map(member => member.uid);
+        allow read, write: if request.auth != null && (resource.data.ownerId == request.auth.uid || get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.teamMembers.hasAny([request.auth.uid]));
       }
 
-      // Files Subcollection
-      // - Allow team members (owner included) to read and write files
       match /files/{fileId} {
-        allow read, write: if get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.teamMembers.map(member => member.uid);
+        allow read, write: if request.auth != null && (resource.data.ownerId == request.auth.uid || get(/databases/$(database)/documents/opportunities/$(opportunityId)).data.teamMembers.hasAny([request.auth.uid]));
       }
     }
   }
