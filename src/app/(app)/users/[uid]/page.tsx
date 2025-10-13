@@ -12,12 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import ProfileForm from '@/components/profile-form';
 import OpportunityCard from '@/components/opportunity-card';
-import { mockUsers, mockOpportunities } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import Link from 'next/link';
-
-const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
 function ProfilePageComponent({ paramsPromise }: { paramsPromise: Promise<{ uid: string }> }) {
   const { uid } = use(paramsPromise);
@@ -32,36 +29,27 @@ function ProfilePageComponent({ paramsPromise }: { paramsPromise: Promise<{ uid:
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
-      if (MOCK_AUTH) {
-        const user = mockUsers.find(u => u.uid === uid);
-        const userProjects = mockOpportunities.filter(
-          op => op.ownerId === uid || op.teamMembers.some(tm => tm.uid === uid)
-        );
-        setProfile(user || null);
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const user = docSnap.data() as UserProfile;
+        setProfile(user);
+
+        const ownedQuery = query(collection(db, "opportunities"), where("ownerId", "==", uid));
+        const memberQuery = query(collection(db, "opportunities"), where("teamMembers", "array-contains", {uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email}));
+        
+        const [ownedSnapshot, memberSnapshot] = await Promise.all([getDocs(ownedQuery), getDocs(memberQuery)]);
+
+        const userProjects = ownedSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Opportunity));
+        memberSnapshot.docs.forEach(d => {
+            if(!userProjects.some(p => p.id === d.id)) {
+                userProjects.push({id: d.id, ...d.data()} as Opportunity);
+            }
+        });
         setProjects(userProjects);
+
       } else {
-        const docRef = doc(db, 'users', uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const user = docSnap.data() as UserProfile;
-          setProfile(user);
-
-          const ownedQuery = query(collection(db, "opportunities"), where("ownerId", "==", uid));
-          const memberQuery = query(collection(db, "opportunities"), where("teamMembers", "array-contains", {uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email}));
-          
-          const [ownedSnapshot, memberSnapshot] = await Promise.all([getDocs(ownedQuery), getDocs(memberQuery)]);
-
-          const userProjects = ownedSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Opportunity));
-          memberSnapshot.docs.forEach(d => {
-              if(!userProjects.some(p => p.id === d.id)) {
-                  userProjects.push({id: d.id, ...d.data()} as Opportunity);
-              }
-          });
-          setProjects(userProjects);
-
-        } else {
-          setProfile(null);
-        }
+        setProfile(null);
       }
       setLoading(false);
     };

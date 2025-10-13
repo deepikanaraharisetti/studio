@@ -9,11 +9,8 @@ import { Briefcase, Star, FolderKanban, Bell } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/providers/auth-provider';
 import { getSuggestedOpportunities } from '@/ai/ai-suggested-opportunities';
-import { mockOpportunities } from '@/lib/mock-data';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
-
-const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
 export default function DashboardPage() {
   const { userProfile } = useAuth();
@@ -26,23 +23,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchOpportunities = async () => {
       setLoading(true);
-      let opportunitiesList: Opportunity[] = [];
-      if (MOCK_AUTH) {
-        opportunitiesList = mockOpportunities;
-        setOpportunities(mockOpportunities);
-      } else {
-        const opportunitiesCollection = collection(db, 'opportunities');
-        const opportunitySnapshot = await getDocs(opportunitiesCollection);
-        opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
-        setOpportunities(opportunitiesList);
-      }
+      const opportunitiesCollection = collection(db, 'opportunities');
+      const opportunitySnapshot = await getDocs(opportunitiesCollection);
+      const opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
+      setOpportunities(opportunitiesList);
       setLoading(false);
 
       if (userProfile) {
-        const owned = MOCK_AUTH 
-          ? mockOpportunities.filter(op => op.ownerId === userProfile.uid)
-          : opportunitiesList.filter(op => op.ownerId === userProfile.uid);
-          
+        const owned = opportunitiesList.filter(op => op.ownerId === userProfile.uid);
         const requests = owned.reduce((acc, op) => acc + (op.joinRequests?.length || 0), 0);
         setStats({ yourProjects: owned.length, joinRequests: requests });
       }
@@ -68,19 +56,11 @@ export default function DashboardPage() {
             return opportunities.find(op => op.id === suggestion.opportunityId);
           }).filter((op): op is Opportunity => !!op);
           
-          if (MOCK_AUTH && recommendedOps.length === 0) {
-            setRecommendedOpportunities(opportunities.slice(0, 2));
-          } else {
-            setRecommendedOpportunities(recommendedOps);
-          }
+          setRecommendedOpportunities(recommendedOps);
 
         } catch (error) {
           console.error("Error fetching recommendations:", error);
-           if (MOCK_AUTH) {
-            setRecommendedOpportunities(opportunities.slice(0,2));
-          } else {
-            setRecommendedOpportunities([]);
-          }
+          setRecommendedOpportunities([]);
         } finally {
           setRecommendationsLoading(false);
         }

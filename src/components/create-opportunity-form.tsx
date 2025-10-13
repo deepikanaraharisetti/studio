@@ -20,8 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from './loading-spinner';
 import { X } from 'lucide-react';
 
-const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
-
 const opportunitySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
@@ -71,18 +69,6 @@ export default function CreateOpportunityForm() {
         return;
     }
     setIsLoading(true);
-
-    if (MOCK_AUTH) {
-        setTimeout(() => {
-            toast({
-                title: 'Opportunity Created! (Mock)',
-                description: 'Your new opportunity is now live.',
-            });
-            router.push('/dashboard');
-            setIsLoading(false);
-        }, 1000);
-        return;
-    }
 
     try {
         await addDoc(collection(db, 'opportunities'), {

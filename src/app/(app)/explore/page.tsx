@@ -9,18 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ListFilter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/providers/auth-provider';
-import { mockOpportunities } from '@/lib/mock-data';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 
-const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
-
 export default function ExplorePage() {
-  const { userProfile } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,14 +25,10 @@ export default function ExplorePage() {
   useEffect(() => {
     const fetchOpportunities = async () => {
       setLoading(true);
-      if (MOCK_AUTH) {
-        setOpportunities(mockOpportunities);
-      } else {
-        const opportunitiesCollection = collection(db, 'opportunities');
-        const opportunitySnapshot = await getDocs(opportunitiesCollection);
-        const opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
-        setOpportunities(opportunitiesList);
-      }
+      const opportunitiesCollection = collection(db, 'opportunities');
+      const opportunitySnapshot = await getDocs(opportunitiesCollection);
+      const opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
+      setOpportunities(opportunitiesList);
       setLoading(false);
     };
 

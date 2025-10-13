@@ -17,9 +17,6 @@ import { Users, Briefcase, FileText, MessageSquare, PlusCircle, Check, X, UserCh
 import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
-import { mockOpportunities } from '@/lib/mock-data';
-
-const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
 function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
   const { id } = use(paramsPromise);
@@ -31,17 +28,6 @@ function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Pro
 
   useEffect(() => {
     if (id) {
-      if (MOCK_AUTH) {
-          const opp = mockOpportunities.find(o => o.id === id);
-          if(opp) {
-            setOpportunity({...opp, joinRequests: opp.joinRequests || []});
-          } else {
-            setOpportunity(null);
-          }
-          setLoading(false);
-          return;
-      } 
-      
       const docRef = doc(db, 'opportunities', id);
       const unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -60,13 +46,6 @@ function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Pro
     if (!userProfile || !opportunity) return;
     setIsSubmitting(true);
 
-    if (MOCK_AUTH) {
-        setOpportunity(prev => prev ? { ...prev, joinRequests: [...(prev.joinRequests || []), userProfile] } : null);
-        toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
-        setIsSubmitting(false);
-        return;
-    }
-
     try {
       const opportunityRef = doc(db, 'opportunities', id);
       await updateDoc(opportunityRef, {
@@ -84,24 +63,6 @@ function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Pro
     if (!userProfile || !opportunity || userProfile.uid !== opportunity.ownerId) return;
 
     const opportunityRef = doc(db, 'opportunities', id);
-
-    if (MOCK_AUTH) {
-        if (action === 'accept') {
-            setOpportunity(prev => prev ? {
-                ...prev,
-                teamMembers: [...prev.teamMembers, applicant],
-                joinRequests: prev.joinRequests.filter(req => req.uid !== applicant.uid),
-            } : null);
-        } else {
-            setOpportunity(prev => prev ? {
-                ...prev,
-                joinRequests: prev.joinRequests.filter(req => req.uid !== applicant.uid),
-            } : null);
-        }
-        toast({title: `Request ${action}ed.`});
-        return;
-    }
-
 
     try {
         if (action === 'accept') {
@@ -284,5 +245,3 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
         </Suspense>
     );
 }
-
-    

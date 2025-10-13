@@ -20,13 +20,6 @@ interface OpportunityFilesProps {
   isMember: boolean;
 }
 
-const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
-
-const mockFiles: ProjectFile[] = [
-    { id: 'file-1', name: 'project-brief.pdf', url: '#', uploaderId: 'owner-1', uploaderName: 'Jane Doe', createdAt: { toDate: () => new Date(Date.now() - 1000 * 60 * 60 * 24) } as any },
-    { id: 'file-2', name: 'design-mockups-v1.zip', url: '#', uploaderId: 'user-1', uploaderName: 'Alice Johnson', createdAt: { toDate: () => new Date(Date.now() - 1000 * 60 * 30) } as any },
-];
-
 export default function OpportunityFiles({ opportunityId, isMember }: OpportunityFilesProps) {
   const { userProfile } = useAuth();
   const { toast } = useToast();
@@ -36,11 +29,6 @@ export default function OpportunityFiles({ opportunityId, isMember }: Opportunit
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-     if (MOCK_AUTH) {
-        setFiles(mockFiles);
-        setLoading(false);
-        return;
-    }
     const filesCol = collection(db, 'opportunities', opportunityId, 'files');
     const q = query(filesCol, orderBy('createdAt', 'desc'));
 
@@ -58,21 +46,6 @@ export default function OpportunityFiles({ opportunityId, isMember }: Opportunit
       const file = e.target.files[0];
       setIsUploading(true);
       
-      if (MOCK_AUTH) {
-        const newFile: ProjectFile = {
-            id: String(Date.now()),
-            name: file.name,
-            url: '#',
-            uploaderId: userProfile.uid,
-            uploaderName: userProfile.displayName,
-            createdAt: { toDate: () => new Date() } as any
-        };
-        setFiles(prev => [newFile, ...prev]);
-        toast({ title: 'File Uploaded (Mock)', description: `${file.name} has been added.` });
-        setIsUploading(false);
-        return;
-      }
-
       try {
         const storageRef = ref(storage, `opportunities/${opportunityId}/${file.name}`);
         const uploadResult = await uploadBytes(storageRef, file);

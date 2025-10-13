@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +15,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/loading-spinner';
-import { useAuth } from '@/providers/auth-provider';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -25,7 +26,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { loginWithMockUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -38,18 +38,17 @@ export default function LoginForm() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    if (data.email === 'test@example.com' && data.password === 'password') {
-      loginWithMockUser();
-      setTimeout(() => {
+    try {
+        await signInWithEmailAndPassword(auth, data.email, data.password);
         router.push('/dashboard');
-      }, 1000);
-    } else {
+    } catch (error: any) {
       toast({
         title: 'Login Failed',
-        description: 'Invalid email or password. Use test@example.com and "password".',
+        description: error.message || 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   };
 

@@ -8,9 +8,6 @@ import OpportunityCard from '@/components/opportunity-card';
 import { useAuth } from '@/providers/auth-provider';
 import LoadingSpinner from '@/components/loading-spinner';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockOpportunities } from '@/lib/mock-data';
-
-const MOCK_AUTH = process.env.NEXT_PUBLIC_MOCK_AUTH === 'true';
 
 export default function MyProjectsPage() {
   const { userProfile } = useAuth();
@@ -28,21 +25,15 @@ export default function MyProjectsPage() {
       setLoading(true);
       setError(null);
 
-      if (MOCK_AUTH) {
-        const owned = mockOpportunities.filter(op => op.ownerId === userProfile.uid);
-        setOpportunitiesList(owned);
+      try {
+        const q = query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid));
+        const querySnapshot = await getDocs(q);
+        const opportunities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
+        setOpportunitiesList(opportunities);
+      } catch (e: any) {
+        setError(e);
+      } finally {
         setLoading(false);
-      } else {
-        try {
-          const q = query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid));
-          const querySnapshot = await getDocs(q);
-          const opportunities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
-          setOpportunitiesList(opportunities);
-        } catch (e: any) {
-          setError(e);
-        } finally {
-          setLoading(false);
-        }
       }
     };
 
