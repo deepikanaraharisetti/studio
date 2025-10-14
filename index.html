@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrewUp - Landing Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --primary-hsl: 239 84% 67%;
+            --muted-foreground-hsl: 220 8.9% 46.1%;
+            --card-hsl: 0 0% 100%;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .bg-primary { background-color: hsl(var(--primary-hsl)); }
+        .text-primary { color: hsl(var(--primary-hsl)); }
+        .text-primary-foreground { color: white; }
+        .bg-card { background-color: hsl(var(--card-hsl)); }
+        .text-muted-foreground { color: hsl(var(--muted-foreground-hsl)); }
+        .bg-primary-10 { background-color: hsla(var(--primary-hsl), 0.1); }
+        .hover\:bg-primary-90:hover { background-color: hsla(var(--primary-hsl), 0.9); }
+        .border-input { border-color: hsl(220 13% 91%); }
+        .hover\:bg-accent:hover { background-color: hsl(220 14.3% 95.9%); }
+        .hover\:text-accent-foreground:hover { color: hsl(222.2 47.4% 11.2%); }
+        .rounded-md { border-radius: 0.75rem; }
+        .shadow { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); }
+        .font-extrabold { font-weight: 800; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+    </style>
+</head>
+<body class="bg-white text-gray-800">
+
+    <div class="flex flex-col min-h-screen">
+      <header class="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+          <span class="text-2xl font-bold text-primary">CrewUp</span>
+        </a>
+        <div class="flex items-center gap-4">
+          <a href="#" class="px-4 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground">Log In</a>
+          <a href="#" class="px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground shadow hover:bg-primary-90">Sign Up</a>
+        </div>
+      </header>
+
+      <main class="flex-grow">
+        <section class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+          <div class="grid md:grid-cols-1 gap-12 items-center text-center">
+            <div class="space-y-6 max-w-2xl mx-auto">
+              <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-primary">
+                Build Your Dream Team, Instantly.
+              </h1>
+              <p class="text-lg text-muted-foreground">
+                CrewUp is where students, professionals, and campus organizations connect. Post your project, find skilled collaborators, and bring your ideas to life.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#" class="px-8 py-3 rounded-md text-base font-medium bg-primary text-primary-foreground shadow hover:bg-primary-90">Get Started for Free</a>
+                <a href="#" class="px-8 py-3 rounded-md text-base font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground">Explore Opportunities</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-card py-16 md:py-24">
+          <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center space-y-4 mb-12">
+              <h2 class="text-3xl font-bold">How It Works</h2>
+              <p class="text-muted-foreground max-w-2xl mx-auto">
+                Finding talent and collaborating has never been easier. Follow these simple steps to get started.
+              </p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 text-center">
+              <div class="flex flex-col items-center space-y-4">
+                <div class="bg-primary-10 p-4 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+                </div>
+                <h3 class="text-xl font-semibold">Post an Opportunity</h3>
+                <p class="text-muted-foreground">
+                  Share your project, event, or startup idea. Specify the roles and skills you're looking for.
+                </p>
+              </div>
+              <div class="flex flex-col items-center space-y-4">
+                <div class="bg-primary-10 p-4 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h3 class="text-xl font-semibold">Discover & Join</h3>
+                <p class="text-muted-foreground">
+                  Browse a wide range of projects and find a team that matches your interests and expertise.
+                </p>
+              </div>
+              <div class="flex flex-col items-center space-y-4">
+                <div class="bg-primary-10 p-4 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="m13 2-3 14-3-7-7 11h17Z"/></svg>
+                </div>
+                <h3 class="text-xl font-semibold">Collaborate & Succeed</h3>
+                <p class="text-muted-foreground">
+                  Use our built-in tools for real-time chat and file sharing to work seamlessly with your new team.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="bg-card">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
+          <p>&copy; 2024 CrewUp. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+
+</body>
+</html>
