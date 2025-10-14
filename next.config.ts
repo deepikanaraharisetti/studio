@@ -32,6 +32,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'studio-1373398294-3404b.appspot.com',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };
