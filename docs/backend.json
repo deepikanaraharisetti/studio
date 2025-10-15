@@ -1,0 +1,261 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile in the CrewUp platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "profilePictureUrl": {
+          "type": "string",
+          "description": "URL of the user's profile picture.",
+          "format": "uri"
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short biography or description of the user."
+        },
+        "skills": {
+          "type": "array",
+          "description": "An array of skills possessed by the user.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email"
+      ]
+    },
+    "Opportunity": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Opportunity",
+      "type": "object",
+      "description": "Represents an opportunity (project, event, etc.) posted on the platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Opportunity entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the opportunity."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the opportunity."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Opportunity). The user who created the opportunity."
+        },
+        "requiredSkills": {
+          "type": "array",
+          "description": "An array of skills required for the opportunity.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "teamMemberIds": {
+          "type": "array",
+          "description": "References to UserProfiles. (Relationship: UserProfile N:N Opportunity) An array of user IDs who are part of the team for this opportunity.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the opportunity was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "authorId",
+        "requiredSkills",
+        "createdAt"
+      ]
+    },
+    "Team": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Team",
+      "type": "object",
+      "description": "Represents a team formed to work on an opportunity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Team entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the team."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the team and its goals."
+        },
+        "opportunityId": {
+          "type": "string",
+          "description": "Reference to Opportunity. (Relationship: Opportunity 1:N Team). The opportunity this team is working on."
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to UserProfiles. (Relationship: UserProfile N:N Team). An array of user IDs who are members of this team.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the team was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "opportunityId",
+        "memberIds",
+        "createdAt"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a chat message within a team.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatMessage entity."
+        },
+        "teamId": {
+          "type": "string",
+          "description": "Reference to Team. (Relationship: Team 1:N ChatMessage). The team to which this message belongs."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ChatMessage). The user who sent the message."
+        },
+        "message": {
+          "type": "string",
+          "description": "The content of the chat message."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The date and time when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "teamId",
+        "senderId",
+        "message",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. Path-based ownership for private user data. Includes `userId` as a parameter.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/opportunities/{opportunityId}",
+        "definition": {
+          "entityName": "Opportunity",
+          "schema": {
+            "$ref": "#/backend/entities/Opportunity"
+          },
+          "description": "Stores opportunity postings. Includes `authorId` to track the creator.",
+          "params": [
+            {
+              "name": "opportunityId",
+              "description": "The unique identifier for the opportunity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/teams/{teamId}",
+        "definition": {
+          "entityName": "Team",
+          "schema": {
+            "$ref": "#/backend/entities/Team"
+          },
+          "description": "Stores team information. Includes `opportunityId` to link to an opportunity, and a `memberIds` array for team membership.",
+          "params": [
+            {
+              "name": "teamId",
+              "description": "The unique identifier for the team."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/teams/{teamId}/messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores chat messages for each team. Subcollection under `/teams/{teamId}`.",
+          "params": [
+            {
+              "name": "teamId",
+              "description": "The unique identifier for the team."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the chat message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the CrewUp platform's core features, focusing on user profiles, opportunities, teams, and chat messages. The design emphasizes authorization independence, clarity, and scalability. User profiles are stored under `/users/{userId}` for private user data. Opportunities are stored in the `/opportunities` collection with the `authorId` field referencing the creator. Teams are stored in the `/teams` collection, including an `opportunityId` to link them to an opportunity, and a `memberIds` array for team members. Chat messages are stored in a subcollection `/teams/{teamId}/messages` to keep the chat messages related to teams, and to simplify querying for messages related to team.\n\n**Authorization Independence:** The `Opportunity` documents do not include a members map because the Team is a separate entity. For teams, the 'memberIds' array facilitate checking team membership. This enables atomic operations.\n\n**QAPs:**\n*   Listing opportunities is secured by rules on the `/opportunities` collection.\n*   User-specific data is secured via path-based rules on `/users/{userId}`.\n\n**Structural Segregation:** Data with different access requirements (e.g., public opportunities and private user profiles) are stored in separate collections to avoid mixing access needs within the same collection."
+  }
+}
