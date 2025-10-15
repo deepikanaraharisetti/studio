@@ -24,7 +24,7 @@ import {
   Search,
   User,
 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useAuth } from '@/firebase';
+import { useUser, useFirestore, useCollection, useAuth, useMemoFirebase } from '@/firebase';
 import { usePathname } from 'next/navigation';
 import { collection, query, where } from 'firebase/firestore';
 import { Opportunity } from '@/lib/types';
@@ -38,14 +38,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [ownedOpportunities] = useCollection(
+  const opportunitiesQuery = useMemoFirebase(() => 
     user && firestore
       ? query(collection(firestore, 'opportunities'), where('ownerId', '==', user.uid))
       : null
-  );
+  , [user, firestore]);
+
+  const [ownedOpportunities] = useCollection(opportunitiesQuery);
 
   const totalJoinRequests =
-    ownedOpportunities?.docs.reduce((acc, doc) => {
+    ownedOpportunities?.reduce((acc, doc) => {
       const opportunity = doc.data() as Opportunity;
       return acc + (opportunity.joinRequests?.length || 0);
     }, 0) || 0;
