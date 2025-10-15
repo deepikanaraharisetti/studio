@@ -61,7 +61,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
       });
       toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
     } catch (error) {
-      toast({ title: "Error", description: "Could not send join request. Please try again.", variant: "destructive" });
+      
     } finally {
       setIsSubmitting(false);
     }
