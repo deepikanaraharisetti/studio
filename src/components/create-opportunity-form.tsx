@@ -34,6 +34,8 @@ export default function CreateOpportunityForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [currentSkill, setCurrentSkill] = useState('');
+  const [currentRole, setCurrentRole] = useState('');
 
   const form = useForm<OpportunityFormValues>({
     resolver: zodResolver(opportunitySchema),
@@ -45,22 +47,29 @@ export default function CreateOpportunityForm() {
     },
   });
 
-  const handleArrayInput = (e: KeyboardEvent<HTMLInputElement>, field: 'requiredSkills' | 'roles') => {
+  const handleArrayInput = (
+    e: KeyboardEvent<HTMLInputElement>,
+    field: 'requiredSkills' | 'roles'
+  ) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       const input = e.currentTarget;
       const newValue = input.value.trim();
       const currentValues = form.getValues(field);
       if (newValue && !currentValues.includes(newValue)) {
-        form.setValue(field, [...currentValues, newValue]);
-        input.value = '';
+        form.setValue(field, [...currentValues, newValue], { shouldValidate: true });
+        if (field === 'requiredSkills') {
+          setCurrentSkill('');
+        } else {
+          setCurrentRole('');
+        }
       }
     }
   };
 
   const removeFromArray = (valueToRemove: string, field: 'requiredSkills' | 'roles') => {
     const currentValues = form.getValues(field);
-    form.setValue(field, currentValues.filter(value => value !== valueToRemove));
+    form.setValue(field, currentValues.filter(value => value !== valueToRemove), { shouldValidate: true });
   };
 
   const onSubmit = async (data: OpportunityFormValues) => {
@@ -162,6 +171,8 @@ export default function CreateOpportunityForm() {
                                 </div>
                                 <Input
                                     placeholder="e.g., React, Python, UI/UX Design (press Enter to add)"
+                                    value={currentSkill}
+                                    onChange={(e) => setCurrentSkill(e.target.value)}
                                     onKeyDown={(e) => handleArrayInput(e, 'requiredSkills')}
                                 />
                             </div>
@@ -191,6 +202,8 @@ export default function CreateOpportunityForm() {
                                 </div>
                                 <Input
                                     placeholder="e.g., Frontend Developer, Project Manager (press Enter to add)"
+                                    value={currentRole}
+                                    onChange={(e) => setCurrentRole(e.target.value)}
                                     onKeyDown={(e) => handleArrayInput(e, 'roles')}
                                 />
                             </div>
