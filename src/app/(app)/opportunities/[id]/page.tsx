@@ -3,9 +3,9 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { doc, updateDoc, arrayUnion, onSnapshot, getDoc, collection, query, where, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
-import { Opportunity, UserProfile, JoinRequest } from '@/lib/types';
+import { doc, updateDoc, arrayUnion, onSnapshot, getDoc, getDocs, collection, query, where, arrayRemove } from 'firebase/firestore';
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { Opportunity, UserProfile } from '@/lib/types';
 
 import LoadingSpinner from '@/components/loading-spinner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,40 +18,42 @@ import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
 
+
+interface JoinRequestWithUserProfile extends UserProfile {
+    // This interface is used to combine profile data with request context
+}
+
 export default function OpportunityDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
+  const [joinRequestProfiles, setJoinRequestProfiles] = useState<JoinRequestWithUserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Fetch join requests for this opportunity
-  const requestsQuery = useMemoFirebase(() => 
-    firestore && id 
-      ? query(collection(firestore, 'requests'), where('opportunityId', '==', id), where('status', '==', 'pending'))
-      : null
-  , [firestore, id]);
-  const { data: joinRequests } = useCollection<JoinRequest>(requestsQuery);
-
-  // Check if the current user has already requested to join
-  const userRequestQuery = useMemoFirebase(() =>
-    firestore && id && user
-        ? query(collection(firestore, 'requests'), where('opportunityId', '==', id), where('userId', '==', user.uid))
-        : null
-  , [firestore, id, user]);
-  const { data: userRequest, isLoading: isUserRequestLoading } = useCollection<JoinRequest>(userRequestQuery);
-
 
   useEffect(() => {
     if (id && firestore) {
       const docRef = doc(firestore, 'opportunities', id);
-      const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      const unsubscribe = onSnapshot(docRef, async (docSnap) => {
         if (docSnap.exists()) {
-          setOpportunity({ id: docSnap.id, ...docSnap.data() } as Opportunity);
+          const oppData = { id: docSnap.id, ...docSnap.data() } as Opportunity;
+          setOpportunity(oppData);
+          // After setting opportunity, fetch profiles for join requests
+          if (oppData.joinRequests && oppData.joinRequests.length > 0) {
+            const userIds = oppData.joinRequests;
+            const profiles = await Promise.all(userIds.map(async (id) => {
+                const userDoc = await getDoc(doc(firestore, 'users', id));
+                return userDoc.exists() ? userDoc.data() as UserProfile : null;
+            }));
+            setJoinRequestProfiles(profiles.filter(p => p !== null) as UserProfile[]);
+          } else {
+            setJoinRequestProfiles([]);
+          }
         } else {
           setOpportunity(null);
+          setJoinRequestProfiles([]);
         }
         setLoading(false);
       }, (error) => {
@@ -65,35 +67,18 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
   const handleJoinRequest = async () => {
     if (!user || !opportunity || !firestore) return;
     setIsSubmitting(true);
-  
+    const opportunityRef = doc(firestore, 'opportunities', id);
+
     try {
-      const userProfileSnap = await getDoc(doc(firestore, 'users', user.uid));
-      if (!userProfileSnap.exists()) {
-        throw new Error("Could not find your user profile.");
-      }
-      const applicantProfile = userProfileSnap.data() as UserProfile;
-
-      const requestData = {
-        opportunityId: opportunity.id,
-        opportunityTitle: opportunity.title,
-        opportunityOwnerId: opportunity.ownerId,
-        userId: user.uid,
-        userName: applicantProfile.displayName || 'Anonymous',
-        userPhotoURL: applicantProfile.photoURL || null,
-        userSkills: applicantProfile.skills || [],
-        status: 'pending' as const,
-        createdAt: serverTimestamp(),
-      };
-
-      await addDoc(collection(firestore, 'requests'), requestData);
-  
+      await updateDoc(opportunityRef, {
+        joinRequests: arrayUnion(user.uid),
+      });
       toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
-    
     } catch (error: any) {
         const permissionError = new FirestorePermissionError({
-            path: 'requests',
-            operation: 'create',
-            requestResourceData: { opportunityId: opportunity.id },
+            path: opportunityRef.path,
+            operation: 'update',
+            requestResourceData: { joinRequests: `arrayUnion with user uid: ${user.uid}` }, // Simplified for error
         });
         errorEmitter.emit('permission-error', permissionError);
     } finally {
@@ -101,28 +86,24 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     }
   };
 
-  const handleRequestAction = async (request: JoinRequest, action: 'accept' | 'decline') => {
+  const handleRequestAction = async (applicant: UserProfile, action: 'accept' | 'decline') => {
     if (!user || !opportunity || user.uid !== opportunity.ownerId || !firestore) return;
     
-    const requestRef = doc(firestore, 'requests', request.id);
+    const opportunityRef = doc(firestore, 'opportunities', id);
 
     try {
+        await updateDoc(opportunityRef, {
+            joinRequests: arrayRemove(applicant.uid)
+        });
+
         if (action === 'accept') {
-            const userProfileSnap = await getDoc(doc(firestore, 'users', request.userId));
-            if (!userProfileSnap.exists()) throw new Error("Applicant profile not found");
-            const applicantProfile = userProfileSnap.data() as UserProfile;
-
-            const opportunityRef = doc(firestore, 'opportunities', id);
             await updateDoc(opportunityRef, {
-                teamMembers: arrayUnion(applicantProfile),
-                teamMemberIds: arrayUnion(request.userId),
+                teamMembers: arrayUnion(applicant),
+                teamMemberIds: arrayUnion(applicant.uid),
             });
-            await updateDoc(requestRef, { status: 'accepted' });
-
-            toast({ title: 'Member Added', description: `${request.userName} is now on the team.` });
+            toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
         } else { // decline
-            await updateDoc(requestRef, { status: 'declined' });
-            toast({ title: 'Request Declined', description: `You have declined the request from ${request.userName}.` });
+            toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
         }
     } catch (error) {
         console.error("Error handling request:", error)
@@ -130,9 +111,10 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     }
   }
 
+
   const isOwner = opportunity?.ownerId === user?.uid;
   const isMember = opportunity?.teamMemberIds?.includes(user?.uid || '');
-  const hasRequested = userRequest && userRequest.length > 0 && userRequest[0].status === 'pending';
+  const hasRequested = opportunity?.joinRequests?.includes(user?.uid || '');
   
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';
@@ -140,7 +122,6 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
   };
 
   const getJoinButton = () => {
-    if (isUserRequestLoading) return <Button className="w-full" size="lg" disabled><LoadingSpinner /></Button>;
     if (isMember) return <Button className="w-full" size="lg" disabled><UserCheck className="mr-2"/>You're on the team</Button>;
     if (hasRequested) return <Button className="w-full" size="lg" disabled variant="outline">Request Sent</Button>;
     if (isOwner) return <Button className="w-full" size="lg" disabled variant="outline">You are the owner</Button>;
@@ -169,35 +150,35 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
           </CardContent>
         </Card>
 
-        {isOwner && (joinRequests?.length ?? 0) > 0 && (
+        {isOwner && joinRequestProfiles.length > 0 && (
             <Card>
                 <CardHeader>
                     <CardTitle>Join Requests</CardTitle>
                     <CardDescription>Review users who want to join your team.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {joinRequests.map(request => (
-                        <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    {joinRequestProfiles.map(applicant => (
+                        <div key={applicant.uid} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                             <div className="flex items-center gap-4">
-                                <Link href={`/users/${request.userId}`}>
+                                <Link href={`/users/${applicant.uid}`}>
                                     <Avatar>
-                                        <AvatarImage src={request.userPhotoURL || ''} />
-                                        <AvatarFallback>{getInitials(request.userName)}</AvatarFallback>
+                                        <AvatarImage src={applicant.photoURL || ''} />
+                                        <AvatarFallback>{getInitials(applicant.displayName)}</AvatarFallback>
                                     </Avatar>
                                 </Link>
                                 <div>
-                                    <Link href={`/users/${request.userId}`} className="font-semibold hover:underline">{request.userName}</Link>
+                                    <Link href={`/users/${applicant.uid}`} className="font-semibold hover:underline">{applicant.displayName}</Link>
                                     <div className="flex flex-wrap gap-1 mt-1">
-                                        {(request.userSkills || []).slice(0,3).map(skill => (
+                                        {(applicant.skills || []).slice(0,3).map(skill => (
                                             <Badge key={skill} variant="secondary">{skill}</Badge>
                                         ))}
-                                        {(request.userSkills?.length || 0) > 3 && <Badge variant="outline">+{(request.userSkills?.length || 0) - 3}</Badge>}
+                                        {(applicant.skills?.length || 0) > 3 && <Badge variant="outline">+{(applicant.skills?.length || 0) - 3}</Badge>}
                                     </div>
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button size="icon" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/50" onClick={() => handleRequestAction(request, 'accept')}><Check className="w-4 h-4"/></Button>
-                                <Button size="icon" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50" onClick={() => handleRequestAction(request, 'decline')}><X className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/50" onClick={() => handleRequestAction(applicant, 'accept')}><Check className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50" onClick={() => handleRequestAction(applicant, 'decline')}><X className="w-4 h-4"/></Button>
                             </div>
                         </div>
                     ))}

@@ -2,9 +2,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { Opportunity, JoinRequest } from '@/lib/types';
+import { Opportunity, UserProfile } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
 import LoadingSpinner from '@/components/loading-spinner';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -13,56 +13,84 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+
+interface JoinRequestWithUserProfile extends UserProfile {
+    opportunityId: string;
+    opportunityTitle: string;
+}
 
 export default function MyProjectsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-
+  
   const opportunitiesQuery = useMemoFirebase(() =>
     user && firestore
       ? query(collection(firestore, "opportunities"), where("ownerId", "==", user.uid))
       : null
   , [user, firestore]);
 
-  const requestsQuery = useMemoFirebase(() =>
-    user && firestore
-      ? query(collection(firestore, "requests"), where("opportunityOwnerId", "==", user.uid), where("status", "==", "pending"))
-      : null
-  , [user, firestore]);
-
   const { data: opportunitiesList, isLoading: opportunitiesLoading, error: opportunitiesError } = useCollection<Opportunity>(opportunitiesQuery);
-  const { data: joinRequests, isLoading: requestsLoading, error: requestsError } = useCollection<JoinRequest>(requestsQuery);
+  const [joinRequests, setJoinRequests] = useState<JoinRequestWithUserProfile[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchJoinRequestProfiles = async () => {
+        if (!opportunitiesList || !firestore) return;
+
+        setRequestsLoading(true);
+        const allRequests: JoinRequestWithUserProfile[] = [];
+        for (const opp of opportunitiesList) {
+            if (opp.joinRequests && opp.joinRequests.length > 0) {
+                const userIds = opp.joinRequests;
+                const profiles = await Promise.all(userIds.map(async (id) => {
+                    const userDoc = await getDoc(doc(firestore, 'users', id));
+                    if (userDoc.exists()) {
+                        return {
+                            ...(userDoc.data() as UserProfile),
+                            opportunityId: opp.id,
+                            opportunityTitle: opp.title,
+                        };
+                    }
+                    return null;
+                }));
+                allRequests.push(...(profiles.filter(p => p !== null) as JoinRequestWithUserProfile[]));
+            }
+        }
+        setJoinRequests(allRequests);
+        setRequestsLoading(false);
+    }
+    if (!opportunitiesLoading) {
+        fetchJoinRequestProfiles();
+    }
+  }, [opportunitiesList, opportunitiesLoading, firestore]);
+  
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
   };
   
-  const handleRequestAction = async (request: JoinRequest, action: 'accept' | 'decline') => {
+  const handleRequestAction = async (request: JoinRequestWithUserProfile, action: 'accept' | 'decline') => {
     if (!user || !firestore) return;
     
-    const requestRef = doc(firestore, 'requests', request.id);
+    const opportunityRef = doc(firestore, 'opportunities', request.opportunityId);
 
     try {
         if (action === 'accept') {
-            const userProfileSnap = await getDoc(doc(firestore, 'users', request.userId));
-            if (!userProfileSnap.exists()) throw new Error("Applicant profile not found");
-            const applicantProfile = userProfileSnap.data();
-
-            const opportunityRef = doc(firestore, 'opportunities', request.opportunityId);
             await updateDoc(opportunityRef, {
-                teamMembers: arrayUnion(applicantProfile),
-                teamMemberIds: arrayUnion(request.userId),
+                teamMembers: arrayUnion(request),
+                teamMemberIds: arrayUnion(request.uid),
+                joinRequests: arrayRemove(request.uid)
             });
-            await updateDoc(requestRef, { status: 'accepted' });
-
-            toast({ title: 'Member Added', description: `${request.userName} is now on the team.` });
+            toast({ title: 'Member Added', description: `${request.displayName} is now on the team.` });
         } else { // decline
-            await updateDoc(requestRef, { status: 'declined' });
-            toast({ title: 'Request Declined', description: `You have declined the request from ${request.userName}.` });
+            await updateDoc(opportunityRef, {
+                joinRequests: arrayRemove(request.uid)
+            });
+            toast({ title: 'Request Declined', description: `You have declined the request from ${request.displayName}.` });
         }
+        // Manually refilter the requests list in the UI
+        setJoinRequests(prev => prev.filter(r => r.uid !== request.uid || r.opportunityId !== request.opportunityId));
     } catch (error) {
         console.error("Error handling request:", error)
         toast({ title: "Error", description: "Could not process the request. Please try again.", variant: "destructive" });
@@ -70,7 +98,7 @@ export default function MyProjectsPage() {
   }
 
   const loading = opportunitiesLoading || requestsLoading;
-  const error = opportunitiesError || requestsError;
+  const error = opportunitiesError;
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
@@ -95,16 +123,16 @@ export default function MyProjectsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {joinRequests.map(request => (
-                <div key={request.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div key={request.uid + request.opportunityId} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-4">
-                        <Link href={`/users/${request.userId}`}>
+                        <Link href={`/users/${request.uid}`}>
                             <Avatar>
-                                <AvatarImage src={request.userPhotoURL || ''} />
-                                <AvatarFallback>{getInitials(request.userName)}</AvatarFallback>
+                                <AvatarImage src={request.photoURL || ''} />
+                                <AvatarFallback>{getInitials(request.displayName)}</AvatarFallback>
                             </Avatar>
                         </Link>
                         <div className="text-sm">
-                            <Link href={`/users/${request.userId}`} className="font-semibold hover:underline">{request.userName}</Link>
+                            <Link href={`/users/${request.uid}`} className="font-semibold hover:underline">{request.displayName}</Link>
                             <span> wants to join </span>
                             <Link href={`/opportunities/${request.opportunityId}`} className="font-semibold hover:underline">{request.opportunityTitle}</Link>
                         </div>

@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { useFirestore, useUser } from '@/firebase';
 import { useCollection } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { JoinRequest } from '@/lib/types';
+import { Opportunity } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -29,13 +29,13 @@ function Notifications() {
     const { user } = useUser();
     const firestore = useFirestore();
     
-    const requestsQuery = useMemoFirebase(() =>
+    const opportunitiesQuery = useMemoFirebase(() =>
         user && firestore
-            ? query(collection(firestore, "requests"), where("opportunityOwnerId", "==", user.uid), where("status", "==", "pending"))
+            ? query(collection(firestore, "opportunities"), where("ownerId", "==", user.uid))
             : null
     , [user, firestore]);
 
-    const { data: joinRequests } = useCollection<JoinRequest>(requestsQuery);
+    const { data: ownedOpportunities } = useCollection<Opportunity>(opportunitiesQuery);
 
     const router = useRouter();
 
@@ -43,13 +43,15 @@ function Notifications() {
         router.push(`/opportunities/${opportunityId}`);
     };
 
+    const requests = ownedOpportunities?.filter(opp => opp.joinRequests && opp.joinRequests.length > 0);
+
     return (
         <Popover>
             <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
-                    {joinRequests && joinRequests.length > 0 && (
-                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0">{joinRequests.length}</Badge>
+                    {requests && requests.length > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0">{requests.reduce((acc, opp) => acc + (opp.joinRequests?.length || 0), 0)}</Badge>
                     )}
                     <span className="sr-only">Toggle notifications</span>
                 </Button>
@@ -57,20 +59,16 @@ function Notifications() {
             <PopoverContent className="w-80 p-2" align="end">
                 <div className="font-semibold p-2">Notifications</div>
                 <div className="border-t border-muted -mx-2 my-1" />
-                {joinRequests && joinRequests.length > 0 ? (
+                {requests && requests.length > 0 ? (
                     <div className="space-y-1">
-                        {joinRequests.map((request) => (
-                            <div key={request.id} 
+                        {requests.map((opp) => (
+                            <div key={opp.id} 
                                  className="p-2 hover:bg-accent rounded-md cursor-pointer"
-                                 onClick={() => handleNotificationClick(request.opportunityId)}
+                                 onClick={() => handleNotificationClick(opp.id)}
                             >
                                 <div className="flex items-center gap-3">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={request.userPhotoURL || ''} />
-                                        <AvatarFallback>{getInitials(request.userName)}</AvatarFallback>
-                                    </Avatar>
                                     <div className="text-sm">
-                                        <span className="font-semibold">{request.userName}</span> requested to join <span className="font-semibold">{request.opportunityTitle}</span>.
+                                        You have {opp.joinRequests.length} new request{opp.joinRequests.length > 1 ? 's' : ''} to join <span className="font-semibold">{opp.title}</span>.
                                     </div>
                                 </div>
                             </div>

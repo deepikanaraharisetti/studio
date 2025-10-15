@@ -18,25 +18,12 @@ export interface Opportunity {
   ownerId: string;
   ownerName: string;
   ownerPhotoURL: string;
-
   requiredSkills: string[];
   roles: string[];
   teamMembers: UserProfile[];
   teamMemberIds: string[];
+  joinRequests: string[]; // This is an array of user UIDs
   createdAt: Timestamp;
-}
-
-export interface JoinRequest {
-    id: string;
-    opportunityId: string;
-    opportunityTitle: string;
-    opportunityOwnerId: string;
-    userId: string;
-    userName: string;
-    userPhotoURL: string | null;
-    userSkills: string[];
-    status: 'pending' | 'accepted' | 'declined';
-    createdAt: Timestamp;
 }
 
 export interface ChatMessage {
