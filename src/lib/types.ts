@@ -18,9 +18,11 @@ export interface Opportunity {
   ownerId: string;
   ownerName: string;
   ownerPhotoURL: string;
+
   requiredSkills: string[];
   roles: string[];
   teamMembers: UserProfile[];
+  teamMemberIds: string[];
   joinRequests: UserProfile[];
   createdAt: Timestamp;
 }

@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
 
-export default function OpportunityDetailsPage({ params }: { params: { id: string } }) {
+export default function OpportunityDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useUser();
   const firestore = useFirestore();
@@ -63,18 +63,12 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
       toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
     })
     .catch((error) => {
-      const permissionError = new FirestorePermissionError({
-        path: opportunityRef.path,
-        operation: 'update',
-        requestResourceData: { joinRequests: [applicantProfile] },
-      });
-      errorEmitter.emit('permission-error', permissionError);
-
-      toast({
-          title: 'Error',
-          description: 'Could not send join request. Please check permissions.',
-          variant: 'destructive',
-      });
+        const permissionError = new FirestorePermissionError({
+            path: opportunityRef.path,
+            operation: 'update',
+            requestResourceData: { joinRequests: arrayUnion(applicantProfile) },
+        });
+        errorEmitter.emit('permission-error', permissionError);
     })
     .finally(() => {
         setIsSubmitting(false);
@@ -90,6 +84,7 @@ export default function OpportunityDetailsPage({ params }: { params: { id: strin
         if (action === 'accept') {
             await updateDoc(opportunityRef, {
                 teamMembers: arrayUnion(applicant),
+                teamMemberIds: arrayUnion(applicant.uid),
                 joinRequests: arrayRemove(applicant),
             });
             toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });

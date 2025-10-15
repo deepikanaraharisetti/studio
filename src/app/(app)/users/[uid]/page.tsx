@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -27,35 +28,48 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndProjects = async () => {
       if (!uid || !firestore) return;
       setLoading(true);
+      
+      // Fetch user profile
       const docRef = doc(firestore, 'users', uid);
       const docSnap = await getDoc(docRef);
+
       if (docSnap.exists()) {
-        const user = docSnap.data() as UserProfile;
-        setProfile(user);
+        const userProfile = docSnap.data() as UserProfile;
+        setProfile(userProfile);
 
-        const ownedQuery = query(collection(firestore, "opportunities"), where("ownerId", "==", uid));
-        const memberQuery = query(collection(firestore, "opportunities"), where("teamMembers", "array-contains", {uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email}));
+        // Fetch projects
+        const opportunitiesRef = collection(firestore, "opportunities");
+        const ownedQuery = query(opportunitiesRef, where("ownerId", "==", uid));
+        const memberQuery = query(opportunitiesRef, where("teamMemberIds", "array-contains", uid));
         
-        const [ownedSnapshot, memberSnapshot] = await Promise.all([getDocs(ownedQuery), getDocs(memberQuery)]);
+        const [ownedSnapshot, memberSnapshot] = await Promise.all([
+            getDocs(ownedQuery),
+            getDocs(memberQuery)
+        ]);
 
-        const userProjects = ownedSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Opportunity));
-        memberSnapshot.docs.forEach(d => {
-            if(!userProjects.some(p => p.id === d.id)) {
-                userProjects.push({id: d.id, ...d.data()} as Opportunity);
+        const userProjectsMap = new Map<string, Opportunity>();
+
+        ownedSnapshot.docs.forEach(doc => {
+            userProjectsMap.set(doc.id, { id: doc.id, ...doc.data() } as Opportunity);
+        });
+
+        memberSnapshot.docs.forEach(doc => {
+            if (!userProjectsMap.has(doc.id)) {
+                userProjectsMap.set(doc.id, { id: doc.id, ...doc.data() } as Opportunity);
             }
         });
-        setProjects(userProjects);
-
+        
+        setProjects(Array.from(userProjectsMap.values()));
       } else {
         setProfile(null);
       }
       setLoading(false);
     };
 
-    fetchProfile();
+    fetchProfileAndProjects();
   }, [uid, firestore]);
 
   const getInitials = (name: string | null | undefined): string => {

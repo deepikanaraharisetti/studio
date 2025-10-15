@@ -121,6 +121,7 @@ export default function CreateOpportunityForm() {
       ownerName: user.displayName,
       ownerPhotoURL: user.photoURL,
       teamMembers: [],
+      teamMemberIds: [],
       joinRequests: [],
       createdAt: serverTimestamp(),
     };
@@ -143,13 +144,6 @@ export default function CreateOpportunityForm() {
             requestResourceData: docData,
         });
         errorEmitter.emit('permission-error', permissionError);
-
-        // We can still show a generic toast to the user
-        toast({
-            title: 'Creation Failed',
-            description: 'You do not have permission to create an opportunity. Please check the security rules.',
-            variant: 'destructive',
-        });
       });
   };
 
