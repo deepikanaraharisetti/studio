@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -38,6 +37,9 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
           setOpportunity(null);
         }
         setLoading(false);
+      }, (error) => {
+        console.error("Error fetching opportunity:", error);
+        setLoading(false);
       });
       return () => unsubscribe();
     }
@@ -47,17 +49,10 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     if (!user || !opportunity || !firestore) return;
     setIsSubmitting(true);
 
-    const applicantProfile: UserProfile = {
-        uid: user.uid,
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL
-    }
-
     const opportunityRef = doc(firestore, 'opportunities', id);
     
     updateDoc(opportunityRef, {
-      joinRequests: arrayUnion(applicantProfile),
+      joinRequests: arrayUnion(user.uid),
     })
     .then(() => {
       toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
@@ -66,7 +61,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
         const permissionError = new FirestorePermissionError({
             path: opportunityRef.path,
             operation: 'update',
-            requestResourceData: { joinRequests: arrayUnion(applicantProfile) },
+            requestResourceData: { joinRequests: arrayUnion(user.uid) },
         });
         errorEmitter.emit('permission-error', permissionError);
     })
@@ -75,24 +70,27 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     });
   };
 
-  const handleRequestAction = async (applicant: UserProfile, action: 'accept' | 'decline') => {
+  const handleRequestAction = async (applicantUid: string, action: 'accept' | 'decline') => {
     if (!user || !opportunity || user.uid !== opportunity.ownerId || !firestore) return;
+    
+    const applicantProfile = opportunity.joinRequests.find(req => req.uid === applicantUid);
+    if (!applicantProfile) return;
 
     const opportunityRef = doc(firestore, 'opportunities', id);
 
     try {
         if (action === 'accept') {
             await updateDoc(opportunityRef, {
-                teamMembers: arrayUnion(applicant),
-                teamMemberIds: arrayUnion(applicant.uid),
-                joinRequests: arrayRemove(applicant),
+                teamMembers: arrayUnion(applicantProfile),
+                teamMemberIds: arrayUnion(applicantProfile.uid),
+                joinRequests: arrayRemove(applicantProfile),
             });
-            toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
+            toast({ title: 'Member Added', description: `${applicantProfile.displayName} is now on the team.` });
         } else { // decline
             await updateDoc(opportunityRef, {
-                joinRequests: arrayRemove(applicant),
+                joinRequests: arrayRemove(applicantProfile),
             });
-            toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
+            toast({ title: 'Request Declined', description: `You have declined the request from ${applicantProfile.displayName}.` });
         }
     } catch (error) {
         toast({ title: "Error", description: "Could not process the request. Please try again.", variant: "destructive" });
@@ -100,7 +98,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
   }
 
   const isOwner = opportunity?.ownerId === user?.uid;
-  const isMember = opportunity?.teamMembers.some(member => member.uid === user?.uid);
+  const isMember = opportunity?.teamMemberIds?.includes(user?.uid || '');
   const hasRequested = opportunity?.joinRequests?.some(req => req.uid === user?.uid);
   
   const getInitials = (name: string | null | undefined): string => {
@@ -164,8 +162,8 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button size="icon" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/50" onClick={() => handleRequestAction(applicant, 'accept')}><Check className="w-4 h-4"/></Button>
-                                <Button size="icon" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50" onClick={() => handleRequestAction(applicant, 'decline')}><X className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" className="text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/50" onClick={() => handleRequestAction(applicant.uid, 'accept')}><Check className="w-4 h-4"/></Button>
+                                <Button size="icon" variant="outline" className="text-red-600 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/50" onClick={() => handleRequestAction(applicant.uid, 'decline')}><X className="w-4 h-4"/></Button>
                             </div>
                         </div>
                     ))}
