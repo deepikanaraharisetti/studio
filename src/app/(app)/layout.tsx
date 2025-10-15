@@ -44,11 +44,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       : null
   , [user, firestore]);
 
-  const [ownedOpportunities] = useCollection(opportunitiesQuery);
+  const { data: ownedOpportunities } = useCollection(opportunitiesQuery);
 
   const totalJoinRequests =
     ownedOpportunities?.reduce((acc, doc) => {
-      const opportunity = doc.data() as Opportunity;
+      const opportunity = doc as Opportunity;
       return acc + (opportunity.joinRequests?.length || 0);
     }, 0) || 0;
 
