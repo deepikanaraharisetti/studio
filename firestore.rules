@@ -53,7 +53,7 @@ service cloud.firestore {
      * @principle Validates the document exists and the user is the owner before allowing modification.
      */
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
@@ -64,8 +64,9 @@ service cloud.firestore {
      * @principle Shared access for team members.
      */
     function isTeamMember(teamId) {
-        return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds;
+      return isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.hasAny([request.auth.uid]);
     }
+
 
     /**
      * @description Rules for user profiles.
@@ -77,9 +78,11 @@ service cloud.firestore {
      * @principle Enforces strict user-ownership for profile data.
      */
     match /users/{userId} {
-      allow get, update, delete: if isExistingOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow get: if isOwner(userId);
       allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     /**
@@ -94,8 +97,9 @@ service cloud.firestore {
      */
     match /opportunities/{opportunityId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
     }
 
     /**
@@ -112,11 +116,11 @@ service cloud.firestore {
      * @principle Shared access for team members.
      */
     match /teams/{teamId} {
-        allow get: if isTeamMember(teamId);
-        allow create: if isSignedIn();
-        allow update: if isTeamMember(teamId);
-        allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
-        allow list: if true;
+      allow get: if isTeamMember(teamId);
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if isTeamMember(teamId);
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
 
     /**
@@ -132,7 +136,8 @@ service cloud.firestore {
     match /teams/{teamId}/messages/{messageId} {
       allow get, list: if isTeamMember(teamId);
       allow create: if isTeamMember(teamId);
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
