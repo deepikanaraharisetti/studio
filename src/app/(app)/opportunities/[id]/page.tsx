@@ -43,6 +43,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
           
           if (oppData.joinRequests && oppData.joinRequests.length > 0) {
             const userIds = oppData.joinRequests;
+            // Batch fetch user profiles
             const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', userIds));
             const profileSnapshots = await getDocs(profilesQuery);
             const profiles = profileSnapshots.docs.map(doc => doc.data() as UserProfile);
