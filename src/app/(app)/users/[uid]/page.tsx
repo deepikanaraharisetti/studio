@@ -16,8 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 
-function ProfilePageComponent({ paramsPromise }: { paramsPromise: Promise<{ uid: string }> }) {
-  const { uid } = use(paramsPromise);
+
+export default function UserProfilePage({ params }: { params: { uid: string } }) {
+  const { uid } = params;
   const searchParams = useSearchParams();
   const isEditMode = searchParams.get('edit') === 'true';
 
@@ -151,13 +152,5 @@ function ProfilePageComponent({ paramsPromise }: { paramsPromise: Promise<{ uid:
       </div>
 
     </div>
-  );
-}
-
-export default function UserProfilePage({ params }: { params: { uid: string } }) {
-  return (
-    <Suspense fallback={<LoadingSpinner fullScreen />}>
-      <ProfilePageComponent paramsPromise={Promise.resolve(params)} />
-    </Suspense>
   );
 }
