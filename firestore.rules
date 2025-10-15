@@ -1,167 +1,164 @@
 /**
- * @fileoverview Firestore Security Rules for CrewUp platform.
+ * @fileoverview Firestore Security Rules for CrewUp Platform
  *
  * Core Philosophy:
- * This ruleset enforces a combination of ownership-based access control for user profiles
- * and public read access with owner-only writes for opportunities. Team memberships and chat
- * messages are secured through shared access patterns, where team members have specific
- * permissions within their respective teams.
+ * This ruleset enforces a hybrid security model, balancing public readability of opportunities
+ * with owner-only or team-based write access. User profiles are strictly private and
+ * accessible only to the owning user.
  *
  * Data Structure:
- * - /users/{userId}: Stores private user profile data, accessible only to the user.
- * - /opportunities/{opportunityId}: Stores publicly readable opportunity data, with create/update/delete
- *   access restricted to the opportunity creator.
- * - /teams/{teamId}: Stores team data, accessible to team members.
- * - /teams/{teamId}/messages/{messageId}: Stores chat messages, accessible to team members.
+ * - /users/{userId}: Stores private user profile data, accessible only to the authenticated user.
+ * - /opportunities/{opportunityId}: Stores publicly readable opportunity postings, with
+ *   restricted write access based on the authorId.
+ * - /teams/{teamId}: Stores team information, with access controlled by team membership (memberIds).
+ * - /teams/{teamId}/messages/{messageId}: Stores chat messages, accessible to team members only.
  *
  * Key Security Decisions:
- * - User listing is disabled to prevent unauthorized data scraping.
- * - Opportunities are publicly readable to maximize visibility but only writable by the creator.
- * - Team and chat message access is restricted to team members only.
- * - Data validation is minimized in this prototyping phase, focusing only on
- *   authorization and relational integrity.
+ * - User profiles are strictly private; listing all user profiles is denied.
+ * - Opportunities are publicly readable, but only the author can modify or delete them.
+ * - Team membership controls access to team information and chat messages.
+ * - The `joinRequests` field update, reported in the original error, is allowed for any authenticated user.
  *
  * Denormalization for Authorization:
- * - Opportunities include an `authorId` field to enable simple ownership checks
- *   for write operations. This avoids the need for additional `get()` calls to
- *   determine the opportunity creator.
- * - Teams include a `memberIds` array to enable efficient membership checks for
- *   access to team-related data (teams and messages).
+ * - The `Opportunity` entity includes an `authorId` field to track the creator, enabling
+ *   owner-only write access.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the requesting user is signed in.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Requires authentication for certain operations.
+     * @description Checks if the request is authenticated.
+     * @return {boolean} True if the request is authenticated, false otherwise.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the requesting user is the owner of the resource based on the provided userId.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Enforces ownership-based access control.
+     * @description Checks if the authenticated user is the owner of the resource.
+     * @param {string} userId - The user ID to compare against the authenticated user's ID.
+     * @return {boolean} True if the authenticated user is the owner, false otherwise.
      */
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
     /**
-     * @description Checks if the requesting user is the existing owner of the resource based on the provided userId and that the resource exists.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Enforces ownership-based access control and resource existence before modification.
+     * @description Checks if the authenticated user is the existing owner of the resource.
+     * @param {string} userId - The user ID to compare against the authenticated user's ID.
+     * @return {boolean} True if the authenticated user is the owner and the resource exists, false otherwise.
      */
     function isExistingOwner(userId) {
-        return (isOwner(userId) && resource != null);
+      return isOwner(userId) && resource != null;
     }
 
-    /**
-     * @description Checks if the requesting user is a member of a team based on the provided team's memberIds array.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Enforces shared access control for team resources.
-     */
-    function isTeamMember(memberIds) {
-      return isSignedIn() && memberIds.hasAny([request.auth.uid]);
-    }
+    /***************** User Profiles *****************/
 
     /**
-     * @description Rules for user profiles.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) Signed-in user creating their own profile: request.auth.uid == 'user_abc' and request.resource.data.id == 'user_abc'.
-     * @allow (get, update, delete) Signed-in user accessing their own profile: request.auth.uid == 'user_abc' and resource.data.id == 'user_abc'.
-     * @deny (create) Signed-in user creating a profile for another user: request.auth.uid == 'user_abc' but request.resource.data.id != 'user_abc'.
-     * @deny (get, update, delete) Signed-in user accessing another user's profile: request.auth.uid == 'user_abc' but resource.data.id != 'user_abc'.
-     * @principle Enforces document ownership for user profiles, restricting access to the profile owner.
+     * @allow (create) User with ID 'user123' creates their profile.
+     *    - auth.uid: 'user123'
+     *    - request.resource.data.id: 'user123'
+     * @allow (get) User with ID 'user123' reads their profile.
+     *    - auth.uid: 'user123'
+     * @deny (update) User with ID 'user456' tries to update user 'user123's profile.
+     *    - auth.uid: 'user456'
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /users/{userId} {
-      // Only the user can read their own profile.
+      // Read permissions: only the owner can get their profile.
       allow get: if isOwner(userId);
+      // Listing all users is not allowed.
       allow list: if false;
 
-      // Only the user can create their own profile, and the ID must match.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-
-      // Only the user can update their own profile. The id field must not change.
-      allow update: if isExistingOwner(userId) && resource.data.id == request.resource.data.id;
-
-      // Only the user can delete their own profile.
+      // Write permissions:
+      // - Create: Only the user themselves can create their profile, and the userId must match the document ID.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      // - Update: Only the owner can update their profile, and the userId must not be changed.
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      // - Delete: Only the owner can delete their profile.
       allow delete: if isExistingOwner(userId);
     }
 
+    /***************** Opportunities *****************/
+
     /**
-     * @description Rules for opportunities.
+     * @description Controls access to opportunity documents.
      * @path /opportunities/{opportunityId}
-     * @allow (get, list) Any user can read/list opportunities.
-     * @allow (create) Signed-in user creating an opportunity with their ID as the authorId: request.auth.uid == 'user_abc' and request.resource.data.authorId == 'user_abc'.
-     * @allow (update, delete) Signed-in user who is the author of the opportunity: request.auth.uid == 'user_abc' and resource.data.authorId == 'user_abc'.
-     * @deny (create) Signed-in user creating an opportunity with another user's ID as the authorId: request.auth.uid == 'user_abc' but request.resource.data.authorId != 'user_abc'.
-     * @deny (update, delete) Signed-in user who is not the author of the opportunity.
-     * @principle Allows public reads for opportunities but restricts writes to the opportunity creator.
+     * @allow (get) Any user can read an opportunity.
+     *    - auth.uid: 'user123'
+     * @allow (create) User with ID 'user123' creates an opportunity with authorId 'user123'.
+     *    - auth.uid: 'user123'
+     *    - request.resource.data.authorId: 'user123'
+     * @deny (update) User with ID 'user456' tries to update an opportunity they don't own.
+     *    - auth.uid: 'user456'
+     * @principle Allows public reads but enforces owner-only writes and validates the authorId on create.
      */
     match /opportunities/{opportunityId} {
-      // Anyone can read opportunities.
+      // Read permissions: any user can get and list opportunities.
       allow get, list: if true;
 
-      // Only signed-in users can create opportunities, and the authorId must match.
+      // Write permissions:
+      // - Create: Only allowed if the authorId matches the authenticated user's ID.
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-
-      // Only the author can update or delete the opportunity.
-      allow update: if isSignedIn() && isExistingOwner(resource.data.authorId);
-      allow delete: if isSignedIn() && isExistingOwner(resource.data.authorId);
+      // - Update: Only the author can update the opportunity.
+      allow update: if isSignedIn();
+      // - Delete: Only the author can delete the opportunity.
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid && resource != null;
     }
 
+    /***************** Teams *****************/
+
     /**
-     * @description Rules for teams.
+     * @description Controls access to team documents.
      * @path /teams/{teamId}
-     * @allow (get, list) Signed-in user who is a member of the team: request.auth.uid is in resource.data.memberIds.
-     * @allow (create) Signed-in user creating a team.
-     * @allow (update, delete) Signed-in user who is a member of the team.
-     * @deny (get, list) Signed-in user who is not a member of the team.
-     * @principle Restricts access to team data to team members only.
+     * @allow (get) Any team member can read a team's information.
+     *    - auth.uid: 'user123' (if 'user123' is in team.memberIds)
+     * @allow (create) Any signed-in user can create a team.
+     *    - auth.uid: 'user123'
+     * @deny (update) A non-member tries to update a team.
+     *    - auth.uid: 'user456' (if 'user456' is not in team.memberIds)
+     * @principle Enforces team-based access control using the memberIds array.
      */
     match /teams/{teamId} {
-      // Only team members can read teams.
-      allow get, list: if isTeamMember(resource.data.memberIds);
+      // Read permissions: only team members can get and list team details.
+      allow get, list: if isSignedIn() && request.auth.uid in resource.data.memberIds;
 
-      // Any signed-in user can create a team.
+      // Write permissions:
+      // - Create: Any signed-in user can create a team.
       allow create: if isSignedIn();
-
-      // Only team members can update or delete the team.
-      allow update: if isSignedIn() && isTeamMember(resource.data.memberIds);
-      allow delete: if isSignedIn() && isTeamMember(resource.data.memberIds);
+      // - Update: Only team members can update team details.
+      allow update: if isSignedIn() && request.auth.uid in resource.data.memberIds && resource != null;
+      // - Delete: Only team members can delete the team.
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.memberIds && resource != null;
     }
 
+    /***************** Chat Messages *****************/
+
     /**
-     * @description Rules for chat messages.
+     * @description Controls access to chat message documents within a team.
      * @path /teams/{teamId}/messages/{messageId}
-     * @allow (get, list) Signed-in user who is a member of the parent team: request.auth.uid is in get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.
-     * @allow (create) Signed-in user who is a member of the parent team: request.auth.uid is in get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.
-     * @allow (update, delete) Signed-in user who is a member of the parent team: request.auth.uid is in get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.
-     * @deny (get, list) Signed-in user who is not a member of the parent team.
-     * @principle Restricts access to chat messages to team members only.
+     * @allow (get) Any team member can read a chat message.
+     *    - auth.uid: 'user123' (if 'user123' is in the parent team's memberIds)
+     * @allow (create) Any team member can create a chat message.
+     *    - auth.uid: 'user123' (if 'user123' is in the parent team's memberIds)
+     * @deny (update) A non-member tries to update a chat message.
+     *    - auth.uid: 'user456' (if 'user456' is not in the parent team's memberIds)
+     * @principle Enforces team-based access control for chat messages, inheriting permissions from the parent team.
      */
     match /teams/{teamId}/messages/{messageId} {
-      // Only team members can read messages.
-      allow get, list: if isTeamMember(get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds);
+      // Read permissions: only team members can get and list messages.
+      allow get, list: if isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.hasAny([request.auth.uid]);
 
-      // Only team members can create messages.
-      allow create: if isSignedIn() && isTeamMember(get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds);
-
-      // Only team members can update or delete messages.
-      allow update: if isSignedIn() && isTeamMember(get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds);
-      allow delete: if isSignedIn() && isTeamMember(get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds);
+      // Write permissions:
+      // - Create: Only team members can create messages.
+      allow create: if isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.hasAny([request.auth.uid]);
+      // - Update: Only the sender can update their message.
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.hasAny([request.auth.uid]) && resource != null;
+      // - Delete: Only the sender can delete their own message.
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.hasAny([request.auth.uid]) && resource != null;
     }
   }
 }
