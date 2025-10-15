@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc } from 'firebase/firestore';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 
@@ -48,26 +48,33 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
   const handleJoinRequest = async () => {
     if (!user || !opportunity || !firestore) return;
     setIsSubmitting(true);
-
+  
     const opportunityRef = doc(firestore, 'opportunities', id);
-    
-    updateDoc(opportunityRef, {
-      joinRequests: arrayUnion(user.uid),
-    })
-    .then(() => {
+    const userProfileRef = doc(firestore, 'users', user.uid);
+  
+    try {
+      const userProfileSnap = await getDoc(userProfileRef);
+      if (!userProfileSnap.exists()) {
+        throw new Error("Could not find your user profile.");
+      }
+      const applicantProfile = userProfileSnap.data() as UserProfile;
+  
+      await updateDoc(opportunityRef, {
+        joinRequests: arrayUnion(applicantProfile),
+      });
+  
       toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
-    })
-    .catch((error) => {
+    
+    } catch (error: any) {
         const permissionError = new FirestorePermissionError({
             path: opportunityRef.path,
             operation: 'update',
-            requestResourceData: { joinRequests: arrayUnion(user.uid) },
+            requestResourceData: { joinRequests: `arrayUnion with user uid: ${user.uid}` }, // Simplified for error
         });
         errorEmitter.emit('permission-error', permissionError);
-    })
-    .finally(() => {
+    } finally {
         setIsSubmitting(false);
-    });
+    }
   };
 
   const handleRequestAction = async (applicantUid: string, action: 'accept' | 'decline') => {
