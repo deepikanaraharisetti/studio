@@ -2,13 +2,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -103,6 +103,7 @@ export default function CreateOpportunityForm() {
       requiredSkills: [],
       roles: [],
     },
+    mode: 'onChange'
   });
 
   const onSubmit = async (data: OpportunityFormValues) => {
@@ -112,36 +113,44 @@ export default function CreateOpportunityForm() {
     }
     setIsLoading(true);
 
-    try {
-        const docData = {
-          ...data,
-          requiredSkills: data.requiredSkills.map(s => s.value), // transform back to array of strings
-          roles: data.roles.map(r => r.value), // transform back to array of strings
-          ownerId: user.uid,
-          ownerName: user.displayName,
-          ownerPhotoURL: user.photoURL,
-          teamMembers: [],
-          joinRequests: [],
-          createdAt: serverTimestamp(),
-        };
+    const docData = {
+      ...data,
+      requiredSkills: data.requiredSkills.map(s => s.value), // transform back to array of strings
+      roles: data.roles.map(r => r.value), // transform back to array of strings
+      ownerId: user.uid,
+      ownerName: user.displayName,
+      ownerPhotoURL: user.photoURL,
+      teamMembers: [],
+      joinRequests: [],
+      createdAt: serverTimestamp(),
+    };
+    
+    const opportunitiesCollection = collection(firestore, 'opportunities');
+    addDoc(opportunitiesCollection, docData)
+      .then((docRef) => {
+        toast({
+          title: 'Opportunity Created!',
+          description: 'Your new opportunity is now live.',
+        });
+        router.push(`/opportunities/${docRef.id}`);
+      })
+      .catch((error) => {
+        setIsLoading(false);
+        // This is where we emit the detailed error
+        const permissionError = new FirestorePermissionError({
+            path: opportunitiesCollection.path,
+            operation: 'create',
+            requestResourceData: docData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
 
-        const docRef = await addDoc(collection(firestore, 'opportunities'), docData);
-
-      toast({
-        title: 'Opportunity Created!',
-        description: 'Your new opportunity is now live.',
+        // We can still show a generic toast to the user
+        toast({
+            title: 'Creation Failed',
+            description: 'You do not have permission to create an opportunity. Please check the security rules.',
+            variant: 'destructive',
+        });
       });
-      router.push(`/opportunities/${docRef.id}`);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Creation Failed',
-        description: 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
@@ -188,7 +197,7 @@ export default function CreateOpportunityForm() {
                 <CardDescription>Specify the expertise and roles needed for your team.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <Controller
+                <FormField
                   control={form.control}
                   name="requiredSkills"
                   render={({ field }) => (
@@ -200,7 +209,7 @@ export default function CreateOpportunityForm() {
                     />
                   )}
                 />
-                <Controller
+                <FormField
                     control={form.control}
                     name="roles"
                     render={({ field }) => (
