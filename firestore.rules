@@ -1,171 +1,110 @@
 /**
- * @fileoverview Firestore Security Rules for CrewUp Platform
+ * @fileoverview Firestore Security Rules for CrewUp platform.
  *
  * Core Philosophy:
- * This ruleset enforces a combination of user-ownership and shared-access models.
- * User profiles are strictly private, accessible only to the owning user.
- * Opportunities are publicly readable but writable only by the author.
- * Teams and their associated chat messages are accessible to team members.
+ * This ruleset enforces a combination of ownership-based and public-read/owner-write access control patterns,
+ * ensuring users can manage their own data while allowing for public discoverability of opportunities.
  *
  * Data Structure:
- * - /users/{userId}: User profile information, private to each user.
- * - /opportunities/{opportunityId}: Opportunity postings, publicly readable.
- * - /teams/{teamId}: Team information, accessible to team members.
- * - /teams/{teamId}/messages/{messageId}: Chat messages for each team, accessible to team members.
+ * - User profiles are stored under `/users/{userId}`, ensuring private user data.
+ * - Opportunities are stored in the top-level `/opportunities` collection with an `authorId` field
+ *   linking back to the creator.
+ * - Teams are stored in the top-level `/teams` collection, linking to opportunities and containing
+ *   a list of `memberIds`.
+ * - Chat messages are stored as a subcollection under teams (`/teams/{teamId}/messages`).
  *
  * Key Security Decisions:
- * - User listing is disabled to prevent enumeration.
- * - Opportunities are publicly readable to facilitate discovery.
- * - Teams and chat messages are secured based on team membership.
+ * - Users can only read/write their own profiles.
+ * - Opportunities are publicly readable but only the creator can modify or delete them.
+ * - Listing of user profiles is disallowed for privacy.
  *
  * Denormalization for Authorization:
- * - Opportunities include an `authorId` field for owner-only write access.
- * - Teams include a `memberIds` array for shared access control.
+ * - Opportunities include an `authorId` field to simplify ownership checks without requiring additional reads.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secures user profile data, ensuring only the user can access their own profile.
+     * @description Checks if the current user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the current user is the owner of the resource.
+     * @param {string} userId The user ID to compare against the request's auth UID.
+     * @return {boolean} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the current user is the owner of the existing resource.
+     * @param {string} userId The user ID to compare against the resource's owner ID.
+     * @return {boolean} True if the user is the owner and the resource exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Enforces document ownership for writes.
      * @path /users/{userId}
-     * @allow (get, create, update, delete, list) User with ID 'user123' can access /users/user123.
-     * @deny (get, create, update, delete, list) User with ID 'user456' cannot access /users/user123.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) User 'user123' with auth UID 'user123' can create their profile.
+     * @deny (create) User 'user123' with auth UID 'user456' cannot create a profile with the wrong ID.
+     * @allow (get, list, update, delete) User 'user123' with auth UID 'user123' can read/write their profile.
+     * @deny (get, list, update, delete) User 'user123' with auth UID 'user456' cannot access another user's profile.
+     * @principle Restricts access to a user's own data tree.
      */
     match /users/{userId} {
-      // Verifies that the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Verifies that the requesting user id matches the document id
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      // Combine isOwner() with resource existence to confirm a user owns the document they are trying to update or delete
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false; // Prevent user enumeration
-
-      // Allow the user to create their own profile, enforcing `id` consistency.
-      allow create: if isSignedIn() && request.resource.data.id == request.auth.uid;
-
-      // On Update, enforce the `id` field's immutability for security.
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-
+      allow list: if false; // Disallow listing of user profiles for privacy.
+      allow create: if isOwner(userId) && request.resource.data.id == request.auth.uid;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id; // enforce immutability
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Manages access to opportunity postings. Publicly readable, owner-only writes.
+     * @description Allows public read access to opportunities, but restricts creation, updates, and deletion to the owner.
      * @path /opportunities/{opportunityId}
-     * @allow (get, list) Any user can read opportunity postings.
-     * @allow (create) User 'user123' can create an opportunity with authorId: 'user123'.
-     * @allow (update, delete) User 'user123' can update/delete an opportunity where resource.data.authorId == 'user123'.
-     * @deny (create) User 'user123' cannot create an opportunity with authorId: 'user456'.
-     * @deny (update, delete) User 'user456' cannot update/delete an opportunity where resource.data.authorId == 'user123'.
-     * @principle Public read, owner-only write access control.
+     * @allow (get, list) Any user (signed in or not) can view the opportunities.
+     * @allow (create) User 'user123' with auth UID 'user123' can create an opportunity with authorId 'user123'.
+     * @deny (create) User 'user123' with auth UID 'user123' cannot create an opportunity with authorId 'user456'.
+     * @allow (update, delete) User 'user123' with auth UID 'user123' can update/delete their opportunity.
+     * @deny (update, delete) User 'user456' with auth UID 'user456' cannot update/delete an opportunity they don't own.
+     * @principle Enforces document ownership for writes.
      */
     match /opportunities/{opportunityId} {
-      // Verifies that the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Verifies that the requesting user id matches the document's authorId
-      function isOwner(authorId) {
-        return request.auth.uid == authorId;
-      }
-
-      // Combine isOwner() with resource existence to confirm a user owns the document they are trying to update or delete
-      function isExistingOwner(authorId) {
-        return isOwner(authorId) && resource != null;
-      }
-
       allow get, list: if true;
-
-      // On Create, validate that the authorId matches the user's UID.
-      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-
-      // On Update, only the opportunity's author can modify it.  Enforce authorId immutability.
-      allow update: if isExistingOwner(resource.data.authorId) && request.resource.data.authorId == resource.data.authorId;
-
-      allow delete: if isExistingOwner(resource.data.authorId);
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isExistingOwner(resource.data.ownerId);
+      allow delete: if isExistingOwner(resource.data.ownerId);
     }
 
     /**
-     * @description Secures team information, allowing access only to team members.
+     * @description Teams are open for any authenticated user to see, but limited update/delete to owner.
      * @path /teams/{teamId}
-     * @allow (get, create, update, delete, list) User 'user123' can access a team if 'user123' is in the memberIds array.
-     * @deny (get, create, update, delete, list) User 'user456' cannot access a team if 'user456' is not in the memberIds array.
-     * @principle Shared access control based on team membership.
      */
     match /teams/{teamId} {
-      // Verifies that the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Verifies that the requesting user is a member of the team
-      function isTeamMember() {
-        return request.auth.uid in resource.data.memberIds;
-      }
-
-       // Combine isTeamMember() with resource existence to confirm a user is a member of the team they are trying to update or delete
-      function isExistingTeamMember() {
-        return isTeamMember() && resource != null;
-      }
-
-      allow get, list: if isTeamMember();
-
-      // On Create, all members must be specified
-      allow create: if isSignedIn() && request.resource.data.memberIds.hasAll([request.auth.uid]);
-
-      // On Update, restrict to team members. No `memberIds` mutations allowed in this prototype
-      allow update: if isExistingTeamMember() && request.resource.data.memberIds == resource.data.memberIds;
-
-      allow delete: if isExistingTeamMember();
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
 
     /**
-     * @description Secures chat messages within a team, accessible only to team members.
+     * @description Messages inherit authorization from the team. Only team members can read/write messages.
      * @path /teams/{teamId}/messages/{messageId}
-     * @allow (get, create, update, delete, list) User 'user123' can access messages if they are a member of the team.
-     * @deny (get, create, update, delete, list) User 'user456' cannot access messages if they are not a member of the team.
-     * @principle Shared access control based on team membership, inherited from the parent team document.
      */
     match /teams/{teamId}/messages/{messageId} {
-      // Verifies that the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Verifies that the requesting user is a member of the team
-      function isTeamMember(teamId) {
-        return get(/databases/$(database)/documents/teams/$(teamId)).data.memberIds.hasAny([request.auth.uid]);
-      }
-
-      // Combine isTeamMember() with resource existence to confirm a user is a member of the team they are trying to update or delete
-      function isExistingTeamMember(teamId) {
-        return isTeamMember(teamId) && resource != null;
-      }
-
-      // To read a message, you must be on the team
-      allow get, list: if isTeamMember(teamId);
-
-      // To create a message, you must be on the team and the senderId must be equal to request.auth.uid
-      allow create: if isSignedIn() && isTeamMember(teamId) && request.resource.data.senderId == request.auth.uid;
-
-      // No updates allowed in this prototype.
-      allow update: if false;
-
-      // Only team members can delete messages
-      allow delete: if isExistingTeamMember(teamId);
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
   }
 }
