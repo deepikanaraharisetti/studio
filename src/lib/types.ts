@@ -23,8 +23,20 @@ export interface Opportunity {
   roles: string[];
   teamMembers: UserProfile[];
   teamMemberIds: string[];
-  joinRequests: UserProfile[];
   createdAt: Timestamp;
+}
+
+export interface JoinRequest {
+    id: string;
+    opportunityId: string;
+    opportunityTitle: string;
+    opportunityOwnerId: string;
+    userId: string;
+    userName: string;
+    userPhotoURL: string | null;
+    userSkills: string[];
+    status: 'pending' | 'accepted' | 'declined';
+    createdAt: Timestamp;
 }
 
 export interface ChatMessage {

@@ -27,7 +27,7 @@ import {
 import { useUser, useFirestore, useCollection, useAuth, useMemoFirebase } from '@/firebase';
 import { usePathname } from 'next/navigation';
 import { collection, query, where } from 'firebase/firestore';
-import { Opportunity } from '@/lib/types';
+import { JoinRequest } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { ClientOnly } from '@/components/client-only';
@@ -39,19 +39,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const opportunitiesQuery = useMemoFirebase(() => 
+  const requestsQuery = useMemoFirebase(() => 
     user && firestore
-      ? query(collection(firestore, 'opportunities'), where('ownerId', '==', user.uid))
+      ? query(collection(firestore, 'requests'), where('opportunityOwnerId', '==', user.uid), where('status', '==', 'pending'))
       : null
   , [user, firestore]);
 
-  const { data: ownedOpportunities } = useCollection(opportunitiesQuery);
+  const { data: joinRequests } = useCollection<JoinRequest>(requestsQuery);
 
-  const totalJoinRequests =
-    ownedOpportunities?.reduce((acc, doc) => {
-      const opportunity = doc as Opportunity;
-      return acc + (opportunity.joinRequests?.length || 0);
-    }, 0) || 0;
+  const totalJoinRequests = joinRequests?.length || 0;
 
   const handleLogout = async () => {
     if (!auth) return;

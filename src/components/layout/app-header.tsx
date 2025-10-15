@@ -10,13 +10,14 @@ import { Button } from '@/components/ui/button';
 import UserNav from './user-nav';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useUser } from '@/firebase';
-import { useCollection } from 'react-firebase-hooks/firestore';
+import { useCollection } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Opportunity } from '@/lib/types';
+import { JoinRequest } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useMemoFirebase } from '@/firebase/provider';
 
 function getInitials(name: string | null | undefined): string {
     if (!name) return '??';
@@ -27,20 +28,16 @@ function getInitials(name: string | null | undefined): string {
 function Notifications() {
     const { user } = useUser();
     const firestore = useFirestore();
-    const [ownedOpportunities] = useCollection(
-        user && firestore ? query(collection(firestore, "opportunities"), where("ownerId", "==", user.uid)) : null
-    );
+    
+    const requestsQuery = useMemoFirebase(() =>
+        user && firestore
+            ? query(collection(firestore, "requests"), where("opportunityOwnerId", "==", user.uid), where("status", "==", "pending"))
+            : null
+    , [user, firestore]);
+
+    const { data: joinRequests } = useCollection<JoinRequest>(requestsQuery);
 
     const router = useRouter();
-
-    const allJoinRequests = ownedOpportunities?.docs.flatMap(doc => {
-        const opportunity = { id: doc.id, ...doc.data() } as Opportunity;
-        return (opportunity.joinRequests || []).map(request => ({
-            ...request,
-            opportunityTitle: opportunity.title,
-            opportunityId: opportunity.id
-        }));
-    }) || [];
 
     const handleNotificationClick = (opportunityId: string) => {
         router.push(`/opportunities/${opportunityId}`);
@@ -51,8 +48,8 @@ function Notifications() {
             <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
-                    {allJoinRequests.length > 0 && (
-                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0">{allJoinRequests.length}</Badge>
+                    {joinRequests && joinRequests.length > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center p-0">{joinRequests.length}</Badge>
                     )}
                     <span className="sr-only">Toggle notifications</span>
                 </Button>
@@ -60,20 +57,20 @@ function Notifications() {
             <PopoverContent className="w-80 p-2" align="end">
                 <div className="font-semibold p-2">Notifications</div>
                 <div className="border-t border-muted -mx-2 my-1" />
-                {allJoinRequests.length > 0 ? (
+                {joinRequests && joinRequests.length > 0 ? (
                     <div className="space-y-1">
-                        {allJoinRequests.map((request, index) => (
-                            <div key={`${request.uid}-${index}`} 
+                        {joinRequests.map((request) => (
+                            <div key={request.id} 
                                  className="p-2 hover:bg-accent rounded-md cursor-pointer"
                                  onClick={() => handleNotificationClick(request.opportunityId)}
                             >
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-8 w-8">
-                                        <AvatarImage src={request.photoURL || ''} />
-                                        <AvatarFallback>{getInitials(request.displayName)}</AvatarFallback>
+                                        <AvatarImage src={request.userPhotoURL || ''} />
+                                        <AvatarFallback>{getInitials(request.userName)}</AvatarFallback>
                                     </Avatar>
                                     <div className="text-sm">
-                                        <span className="font-semibold">{request.displayName}</span> requested to join <span className="font-semibold">{request.opportunityTitle}</span>.
+                                        <span className="font-semibold">{request.userName}</span> requested to join <span className="font-semibold">{request.opportunityTitle}</span>.
                                     </div>
                                 </div>
                             </div>
