@@ -30,6 +30,7 @@ import { collection, query, where } from 'firebase/firestore';
 import { Opportunity } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
+import { ClientOnly } from '@/components/client-only';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
@@ -67,46 +68,48 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href + item.label}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                    {item.badge && <Badge variant="destructive" className="ml-auto group-data-[collapsible=icon]:hidden">{item.badge}</Badge>}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarFooter>
+    <ClientOnly>
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarHeader>
+          </SidebarHeader>
+          <SidebarContent>
             <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
-                        <LogOut />
-                        <span>Logout</span>
-                    </SidebarMenuButton>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.href + item.label}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                      {item.badge && <Badge variant="destructive" className="ml-auto group-data-[collapsible=icon]:hidden">{item.badge}</Badge>}
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
+              ))}
             </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <AppHeader />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-muted/40">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          </SidebarContent>
+          <SidebarFooter>
+              <SidebarMenu>
+                  <SidebarMenuItem>
+                      <SidebarMenuButton onClick={handleLogout} tooltip="Logout">
+                          <LogOut />
+                          <span>Logout</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
+          <AppHeader />
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-muted/40">
+            {children}
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </ClientOnly>
   );
 }
