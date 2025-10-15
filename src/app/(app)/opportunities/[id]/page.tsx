@@ -40,15 +40,19 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
         if (docSnap.exists()) {
           const oppData = { id: docSnap.id, ...docSnap.data() } as Opportunity;
           setOpportunity(oppData);
-          
+
           if (oppData.joinRequests && oppData.joinRequests.length > 0) {
-            const userIds = oppData.joinRequests;
-            const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', userIds));
-            const profileSnapshots = await getDocs(profilesQuery);
-            const profiles = profileSnapshots.docs.map(doc => doc.data() as UserProfile);
-            setJoinRequestProfiles(profiles);
+              const uniqueUserIds = [...new Set(oppData.joinRequests)];
+              if (uniqueUserIds.length > 0) {
+                  const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', uniqueUserIds));
+                  const profileSnapshots = await getDocs(profilesQuery);
+                  const profiles = profileSnapshots.docs.map(doc => doc.data() as UserProfile);
+                  setJoinRequestProfiles(profiles);
+              } else {
+                  setJoinRequestProfiles([]);
+              }
           } else {
-            setJoinRequestProfiles([]);
+              setJoinRequestProfiles([]);
           }
         } else {
           setOpportunity(null);
@@ -267,7 +271,6 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
             ))}
           </CardContent>
         </Card>
-
       </div>
     </div>
   );
