@@ -4,7 +4,7 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 
 import LoadingSpinner from '@/components/loading-spinner';
@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
 
-export default function OpportunityDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function OpportunityDetailsPage({ params }: { params: { id: string } }) {
   const { id } = use(params);
   const { user } = useUser();
   const firestore = useFirestore();
@@ -54,17 +54,31 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
         photoURL: user.photoURL
     }
 
-    try {
-      const opportunityRef = doc(firestore, 'opportunities', id);
-      await updateDoc(opportunityRef, {
-        joinRequests: arrayUnion(applicantProfile),
-      });
+    const opportunityRef = doc(firestore, 'opportunities', id);
+    
+    updateDoc(opportunityRef, {
+      joinRequests: arrayUnion(applicantProfile),
+    })
+    .then(() => {
       toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
-    } catch (error) {
-      
-    } finally {
-      setIsSubmitting(false);
-    }
+    })
+    .catch((error) => {
+      const permissionError = new FirestorePermissionError({
+        path: opportunityRef.path,
+        operation: 'update',
+        requestResourceData: { joinRequests: [applicantProfile] },
+      });
+      errorEmitter.emit('permission-error', permissionError);
+
+      toast({
+          title: 'Error',
+          description: 'Could not send join request. Please check permissions.',
+          variant: 'destructive',
+      });
+    })
+    .finally(() => {
+        setIsSubmitting(false);
+    });
   };
 
   const handleRequestAction = async (applicant: UserProfile, action: 'accept' | 'decline') => {
