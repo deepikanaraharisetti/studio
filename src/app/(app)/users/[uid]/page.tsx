@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useEffect, useState, Suspense, use } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
@@ -16,9 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 
-
-export default function UserProfilePage({ params }: { params: { uid: string } }) {
-  const { uid } = params;
+export default function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
+  const { uid } = use(params);
   const searchParams = useSearchParams();
   const isEditMode = searchParams.get('edit') === 'true';
 
