@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
@@ -18,8 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import OpportunityChat from '@/components/opportunity-chat';
 import OpportunityFiles from '@/components/opportunity-files';
 
-function OpportunityDetailsPageComponent({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function OpportunityDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -244,12 +244,4 @@ function OpportunityDetailsPageComponent({ params }: { params: { id: string } })
       </div>
     </div>
   );
-}
-
-export default function OpportunityDetailsPage({ params }: { params: { id: string } }) {
-    return (
-        <Suspense fallback={<LoadingSpinner fullScreen />}>
-            <OpportunityDetailsPageComponent params={params} />
-        </Suspense>
-    );
 }
