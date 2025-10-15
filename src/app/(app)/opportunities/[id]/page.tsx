@@ -4,9 +4,8 @@
 import { useEffect, useState, use, Suspense } from 'react';
 import Link from 'next/link';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
-import { useAuth } from '@/providers/auth-provider';
 
 import LoadingSpinner from '@/components/loading-spinner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,15 +20,16 @@ import OpportunityFiles from '@/components/opportunity-files';
 
 function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
   const { id } = use(paramsPromise);
-  const { userProfile } = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const docRef = doc(db, 'opportunities', id);
+    if (id && firestore) {
+      const docRef = doc(firestore, 'opportunities', id);
       const unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
           setOpportunity({ id: docSnap.id, ...docSnap.data() } as Opportunity);
@@ -41,16 +41,23 @@ function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Pro
       });
       return () => unsubscribe();
     }
-  }, [id]);
+  }, [id, firestore]);
 
   const handleJoinRequest = async () => {
-    if (!userProfile || !opportunity) return;
+    if (!user || !opportunity || !firestore) return;
     setIsSubmitting(true);
 
+    const applicantProfile: UserProfile = {
+        uid: user.uid,
+        displayName: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL
+    }
+
     try {
-      const opportunityRef = doc(db, 'opportunities', id);
+      const opportunityRef = doc(firestore, 'opportunities', id);
       await updateDoc(opportunityRef, {
-        joinRequests: arrayUnion(userProfile),
+        joinRequests: arrayUnion(applicantProfile),
       });
       toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
     } catch (error) {
@@ -61,9 +68,9 @@ function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Pro
   };
 
   const handleRequestAction = async (applicant: UserProfile, action: 'accept' | 'decline') => {
-    if (!userProfile || !opportunity || userProfile.uid !== opportunity.ownerId) return;
+    if (!user || !opportunity || user.uid !== opportunity.ownerId || !firestore) return;
 
-    const opportunityRef = doc(db, 'opportunities', id);
+    const opportunityRef = doc(firestore, 'opportunities', id);
 
     try {
         if (action === 'accept') {
@@ -83,9 +90,9 @@ function OpportunityDetailsPageComponent({ paramsPromise }: { paramsPromise: Pro
     }
   }
 
-  const isOwner = opportunity?.ownerId === userProfile?.uid;
-  const isMember = opportunity?.teamMembers.some(member => member.uid === userProfile?.uid);
-  const hasRequested = opportunity?.joinRequests?.some(req => req.uid === userProfile?.uid);
+  const isOwner = opportunity?.ownerId === user?.uid;
+  const isMember = opportunity?.teamMembers.some(member => member.uid === user?.uid);
+  const hasRequested = opportunity?.joinRequests?.some(req => req.uid === user?.uid);
   
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';

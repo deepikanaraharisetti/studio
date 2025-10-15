@@ -7,9 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { UserProfile } from '@/lib/types';
 import { doc, updateDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes, getStorage } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
-import { db, storage, auth } from '@/lib/firebase';
+import { useAuth, useFirestore, useUser, initializeFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
@@ -34,6 +34,8 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfileForm({ userProfile }: { userProfile: UserProfile }) {
   const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
   const [newAvatar, setNewAvatar] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(userProfile.photoURL);
@@ -77,12 +79,13 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
 
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser || !firestore) return;
     setIsLoading(true);
 
     try {
       let photoURL = userProfile.photoURL;
       if (newAvatar) {
+        const storage = getStorage(initializeFirebase().firebaseApp);
         const storageRef = ref(storage, `avatars/${auth.currentUser.uid}`);
         await uploadBytes(storageRef, newAvatar);
         photoURL = await getDownloadURL(storageRef);
@@ -93,7 +96,7 @@ export default function ProfileForm({ userProfile }: { userProfile: UserProfile 
         photoURL: photoURL,
       });
 
-      const userDocRef = doc(db, 'users', auth.currentUser.uid);
+      const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
       await updateDoc(userDocRef, {
         ...data,
         photoURL: photoURL,

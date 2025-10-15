@@ -24,24 +24,23 @@ import {
   Search,
   User,
 } from 'lucide-react';
-import { useAuth } from '@/providers/auth-provider';
+import { useUser, useFirestore, useCollection, useAuth } from '@/firebase';
 import { usePathname } from 'next/navigation';
-import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Opportunity } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { userProfile } = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   const [ownedOpportunities] = useCollection(
-    userProfile
-      ? query(collection(db, 'opportunities'), where('ownerId', '==', userProfile.uid))
+    user && firestore
+      ? query(collection(firestore, 'opportunities'), where('ownerId', '==', user.uid))
       : null
   );
 
@@ -52,6 +51,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }, 0) || 0;
 
   const handleLogout = async () => {
+    if (!auth) return;
     await signOut(auth);
     router.push('/login');
   };
@@ -61,7 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/explore', icon: Search, label: 'Explore' },
     { href: '/my-projects', icon: FolderKanban, label: 'My Projects', badge: totalJoinRequests > 0 ? totalJoinRequests : undefined },
     { href: '/opportunities/create', icon: PlusSquare, label: 'New Opportunity' },
-    { href: userProfile ? `/users/${userProfile.uid}` : '/profile', icon: User, label: 'My Profile' },
+    { href: user ? `/users/${user.uid}` : '/profile', icon: User, label: 'My Profile' },
   ];
 
   return (

@@ -8,8 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/providers/auth-provider';
+import { useFirestore, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,8 @@ type OpportunityFormValues = z.infer<typeof opportunitySchema>;
 
 export default function CreateOpportunityForm() {
   const router = useRouter();
-  const { userProfile } = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -65,18 +65,18 @@ export default function CreateOpportunityForm() {
   };
 
   const onSubmit = async (data: OpportunityFormValues) => {
-    if (!userProfile) {
+    if (!user || !firestore) {
         toast({ title: 'Error', description: 'You must be logged in to create an opportunity.', variant: 'destructive' });
         return;
     }
     setIsLoading(true);
 
     try {
-        await addDoc(collection(db, 'opportunities'), {
+        await addDoc(collection(firestore, 'opportunities'), {
             ...data,
-            ownerId: userProfile.uid,
-            ownerName: userProfile.displayName,
-            ownerPhotoURL: userProfile.photoURL,
+            ownerId: user.uid,
+            ownerName: user.displayName,
+            ownerPhotoURL: user.photoURL,
             teamMembers: [],
             joinRequests: [],
             createdAt: serverTimestamp(),

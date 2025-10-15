@@ -3,22 +3,22 @@
 
 import { useEffect, useState } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { Opportunity } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
-import { useAuth } from '@/providers/auth-provider';
 import LoadingSpinner from '@/components/loading-spinner';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function MyProjectsPage() {
-  const { userProfile } = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [opportunitiesList, setOpportunitiesList] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
   useEffect(() => {
     const fetchOpportunities = async () => {
-      if (!userProfile) {
+      if (!user || !firestore) {
         setLoading(false);
         return;
       }
@@ -27,7 +27,7 @@ export default function MyProjectsPage() {
       setError(null);
 
       try {
-        const q = query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid));
+        const q = query(collection(firestore, "opportunities"), where("ownerId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const opportunities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
         setOpportunitiesList(opportunities);
@@ -39,7 +39,7 @@ export default function MyProjectsPage() {
     };
 
     fetchOpportunities();
-  }, [userProfile]);
+  }, [user, firestore]);
 
   if (loading) {
     return <LoadingSpinner fullScreen />;

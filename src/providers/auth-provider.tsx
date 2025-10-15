@@ -2,8 +2,8 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { User, onAuthStateChanged } from 'firebase/auth';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
 import LoadingSpinner from '@/components/loading-spinner';
@@ -21,16 +21,15 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true);
-      setUser(user);
-      if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
+    const fetchProfile = async () => {
+      if (user && firestore) {
+        const userDocRef = doc(firestore, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUserProfile(userDoc.data() as UserProfile);
@@ -48,12 +47,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUserProfile(null);
       }
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    }
+    
+    if (!isUserLoading) {
+        fetchProfile();
+    }
+    
+  }, [user, isUserLoading, firestore]);
 
   const value = { user, userProfile, loading };
+
+  if (loading) {
+    return <LoadingSpinner fullScreen />;
+  }
 
   return (
     <AuthContext.Provider value={value}>
@@ -62,4 +68,4 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuthContext = () => useContext(AuthContext);

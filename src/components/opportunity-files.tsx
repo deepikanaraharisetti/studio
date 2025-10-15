@@ -4,8 +4,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
-import { useAuth } from '@/providers/auth-provider';
+import { useFirestore, useUser } from '@/firebase';
+import { initializeFirebase } from '@/firebase';
+import { getStorage } from 'firebase/storage';
 import { ProjectFile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import LoadingSpinner from './loading-spinner';
 import { format } from 'date-fns';
 import { Upload, File, Download, Lock } from 'lucide-react';
-import Link from 'next/link';
 
 interface OpportunityFilesProps {
   opportunityId: string;
@@ -22,15 +22,19 @@ interface OpportunityFilesProps {
 }
 
 export default function OpportunityFiles({ opportunityId, isMember }: OpportunityFilesProps) {
-  const { userProfile } = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const storage = getStorage(initializeFirebase().firebaseApp);
+
   useEffect(() => {
-    const filesCol = collection(db, 'opportunities', opportunityId, 'files');
+    if (!firestore) return;
+    const filesCol = collection(firestore, 'opportunities', opportunityId, 'files');
     const q = query(filesCol, orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -40,10 +44,10 @@ export default function OpportunityFiles({ opportunityId, isMember }: Opportunit
     });
 
     return () => unsubscribe();
-  }, [opportunityId]);
+  }, [opportunityId, firestore]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && userProfile) {
+    if (e.target.files && e.target.files[0] && user && firestore) {
       const file = e.target.files[0];
       setIsUploading(true);
       
@@ -52,11 +56,11 @@ export default function OpportunityFiles({ opportunityId, isMember }: Opportunit
         const uploadResult = await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(uploadResult.ref);
 
-        await addDoc(collection(db, 'opportunities', opportunityId, 'files'), {
+        await addDoc(collection(firestore, 'opportunities', opportunityId, 'files'), {
           name: file.name,
           url: downloadURL,
-          uploaderId: userProfile.uid,
-          uploaderName: userProfile.displayName,
+          uploaderId: user.uid,
+          uploaderName: user.displayName,
           createdAt: serverTimestamp(),
         });
 

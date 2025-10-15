@@ -1,23 +1,27 @@
 
 'use client';
 
-import { useAuth } from '@/providers/auth-provider';
+import { useUser } from '@/firebase';
 import ProfileForm from '@/components/profile-form';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { UserProfile } from '@/lib/types';
+import { useState } from 'react';
 
 // This page is now a redirector to the dynamic user profile page.
 // The actual form is still used for editing, but viewing a profile
 // is handled by /users/[uid]
 export default function ProfilePage() {
-  const { userProfile } = useAuth();
+  const { user } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (userProfile?.uid) {
-      router.replace(`/users/${userProfile.uid}?edit=true`);
+    if (user?.uid) {
+      router.replace(`/users/${user.uid}?edit=true`);
     }
-  }, [userProfile, router]);
+  }, [user, router]);
 
 
   return null; // or a loading state

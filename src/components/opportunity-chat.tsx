@@ -3,8 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/providers/auth-provider';
+import { useFirestore, useUser } from '@/firebase';
 import { ChatMessage } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -21,14 +20,16 @@ interface OpportunityChatProps {
 }
 
 export default function OpportunityChat({ opportunityId, isMember }: OpportunityChatProps) {
-  const { userProfile } = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const messagesCol = collection(db, 'opportunities', opportunityId, 'messages');
+    if (!firestore) return;
+    const messagesCol = collection(firestore, 'opportunities', opportunityId, 'messages');
     const q = query(messagesCol, orderBy('createdAt', 'asc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -38,7 +39,7 @@ export default function OpportunityChat({ opportunityId, isMember }: Opportunity
     });
 
     return () => unsubscribe();
-  }, [opportunityId]);
+  }, [opportunityId, firestore]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -51,17 +52,17 @@ export default function OpportunityChat({ opportunityId, isMember }: Opportunity
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !userProfile) return;
+    if (!newMessage.trim() || !user || !firestore) return;
 
     const messageData = {
       text: newMessage,
-      senderId: userProfile.uid,
-      senderName: userProfile.displayName,
-      senderPhotoURL: userProfile.photoURL,
+      senderId: user.uid,
+      senderName: user.displayName,
+      senderPhotoURL: user.photoURL,
       createdAt: serverTimestamp(),
     };
 
-    await addDoc(collection(db, 'opportunities', opportunityId, 'messages'), messageData);
+    await addDoc(collection(firestore, 'opportunities', opportunityId, 'messages'), messageData);
 
     setNewMessage('');
   };

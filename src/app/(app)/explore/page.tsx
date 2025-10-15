@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useFirestore } from '@/firebase';
 import { Opportunity } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 
 export default function ExplorePage() {
+  const firestore = useFirestore();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,8 +26,9 @@ export default function ExplorePage() {
   
   useEffect(() => {
     const fetchOpportunities = async () => {
+      if (!firestore) return;
       setLoading(true);
-      const opportunitiesCollection = collection(db, 'opportunities');
+      const opportunitiesCollection = collection(firestore, 'opportunities');
       const opportunitySnapshot = await getDocs(opportunitiesCollection);
       const opportunitiesList = opportunitySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Opportunity));
       setOpportunities(opportunitiesList);
@@ -34,7 +36,7 @@ export default function ExplorePage() {
     };
 
     fetchOpportunities();
-  }, []);
+  }, [firestore]);
 
 
   const allSkills = useMemo(() => {

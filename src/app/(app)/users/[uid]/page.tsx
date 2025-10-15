@@ -4,9 +4,8 @@
 import { useEffect, useState, Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { UserProfile, Opportunity } from '@/lib/types';
-import { useAuth } from '@/providers/auth-provider';
 import LoadingSpinner from '@/components/loading-spinner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -22,22 +21,24 @@ function ProfilePageComponent({ paramsPromise }: { paramsPromise: Promise<{ uid:
   const searchParams = useSearchParams();
   const isEditMode = searchParams.get('edit') === 'true';
 
-  const { userProfile: authUserProfile } = useAuth();
+  const { user: authUser } = useUser();
+  const firestore = useFirestore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [projects, setProjects] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!uid || !firestore) return;
       setLoading(true);
-      const docRef = doc(db, 'users', uid);
+      const docRef = doc(firestore, 'users', uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const user = docSnap.data() as UserProfile;
         setProfile(user);
 
-        const ownedQuery = query(collection(db, "opportunities"), where("ownerId", "==", uid));
-        const memberQuery = query(collection(db, "opportunities"), where("teamMembers", "array-contains", {uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email}));
+        const ownedQuery = query(collection(firestore, "opportunities"), where("ownerId", "==", uid));
+        const memberQuery = query(collection(firestore, "opportunities"), where("teamMembers", "array-contains", {uid: user.uid, displayName: user.displayName, photoURL: user.photoURL, email: user.email}));
         
         const [ownedSnapshot, memberSnapshot] = await Promise.all([getDocs(ownedQuery), getDocs(memberQuery)]);
 
@@ -55,17 +56,15 @@ function ProfilePageComponent({ paramsPromise }: { paramsPromise: Promise<{ uid:
       setLoading(false);
     };
 
-    if (uid) {
-      fetchProfile();
-    }
-  }, [uid]);
+    fetchProfile();
+  }, [uid, firestore]);
 
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '??';
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  const isOwner = authUserProfile?.uid === uid;
+  const isOwner = authUser?.uid === uid;
 
   if (loading) return <LoadingSpinner fullScreen />;
   if (!profile) return <div className="text-center py-12">User not found.</div>;

@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import UserNav from './user-nav';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/providers/auth-provider';
+import { useFirestore, useUser } from '@/firebase';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, where } from 'firebase/firestore';
 import { Opportunity } from '@/lib/types';
@@ -17,7 +17,6 @@ import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { db } from '@/lib/firebase';
 
 function getInitials(name: string | null | undefined): string {
     if (!name) return '??';
@@ -26,9 +25,10 @@ function getInitials(name: string | null | undefined): string {
 
 
 function Notifications() {
-    const { userProfile } = useAuth();
+    const { user } = useUser();
+    const firestore = useFirestore();
     const [ownedOpportunities] = useCollection(
-        userProfile ? query(collection(db, "opportunities"), where("ownerId", "==", userProfile.uid)) : null
+        user && firestore ? query(collection(firestore, "opportunities"), where("ownerId", "==", user.uid)) : null
     );
 
     const router = useRouter();
