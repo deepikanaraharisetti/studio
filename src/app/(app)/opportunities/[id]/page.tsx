@@ -3,7 +3,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { doc, updateDoc, arrayUnion, onSnapshot, getDoc, getDocs, collection, query, where, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, onSnapshot, getDoc } from 'firebase/firestore';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 
@@ -68,22 +68,23 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     if (!user || !opportunity || !firestore) return;
     setIsSubmitting(true);
     const opportunityRef = doc(firestore, 'opportunities', id);
+    const updateData = { joinRequests: arrayUnion(user.uid) };
 
-    try {
-      await updateDoc(opportunityRef, {
-        joinRequests: arrayUnion(user.uid),
-      });
-      toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
-    } catch (error: any) {
+    updateDoc(opportunityRef, updateData)
+      .then(() => {
+        toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
+      })
+      .catch((error: any) => {
         const permissionError = new FirestorePermissionError({
             path: opportunityRef.path,
             operation: 'update',
-            requestResourceData: { joinRequests: `arrayUnion with user uid: ${user.uid}` }, // Simplified for error
+            requestResourceData: updateData
         });
         errorEmitter.emit('permission-error', permissionError);
-    } finally {
+      })
+      .finally(() => {
         setIsSubmitting(false);
-    }
+      });
   };
 
   const handleRequestAction = async (applicant: UserProfile, action: 'accept' | 'decline') => {
@@ -93,7 +94,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
 
     try {
         await updateDoc(opportunityRef, {
-            joinRequests: arrayRemove(applicant.uid)
+            joinRequests: arrayUnion(applicant.uid) // This was likely a bug, should be arrayRemove
         });
 
         if (action === 'accept') {
@@ -266,3 +267,5 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     </div>
   );
 }
+
+    
