@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, KeyboardEvent } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,11 +23,70 @@ import { X } from 'lucide-react';
 const opportunitySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  requiredSkills: z.array(z.string()).min(1, 'At least one skill is required'),
-  roles: z.array(z.string()).min(1, 'At least one role is required'),
+  requiredSkills: z.array(z.object({ value: z.string() })).min(1, 'At least one skill is required'),
+  roles: z.array(z.object({ value: z.string() })).min(1, 'At least one role is required'),
 });
 
 type OpportunityFormValues = z.infer<typeof opportunitySchema>;
+
+// Helper component for array input fields
+function ArrayInput({
+  control,
+  name,
+  label,
+  placeholder,
+}: {
+  control: any;
+  name: 'requiredSkills' | 'roles';
+  label: string;
+  placeholder: string;
+}) {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name,
+  });
+  const [inputValue, setInputValue] = useState('');
+
+  const handleAppend = () => {
+    if (inputValue && !fields.some(field => (field as any).value === inputValue)) {
+      append({ value: inputValue });
+      setInputValue('');
+    }
+  };
+
+  return (
+    <FormItem>
+      <FormLabel>{label}</FormLabel>
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {fields.map((field, index) => (
+            <Badge key={field.id} variant="secondary" className="text-sm py-1 pl-3 pr-2">
+              {(field as any).value}
+              <button type="button" onClick={() => remove(index)} className="ml-2 rounded-full hover:bg-destructive/20 p-0.5">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        <div className="flex gap-2">
+            <Input
+              placeholder={placeholder}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAppend();
+                }
+              }}
+            />
+            <Button type="button" variant="outline" onClick={handleAppend}>Add</Button>
+        </div>
+      </div>
+      <FormMessage />
+    </FormItem>
+  );
+}
 
 export default function CreateOpportunityForm() {
   const router = useRouter();
@@ -44,31 +103,7 @@ export default function CreateOpportunityForm() {
       requiredSkills: [],
       roles: [],
     },
-    mode: 'onChange' // Validate on change to provide immediate feedback
   });
-
-  const handleArrayInput = (
-    e: KeyboardEvent<HTMLInputElement>,
-    field: 'requiredSkills' | 'roles'
-  ) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const input = e.currentTarget;
-      const newValue = input.value.trim();
-      if (newValue) {
-        const currentValues = form.getValues(field);
-        if (!currentValues.includes(newValue)) {
-          form.setValue(field, [...currentValues, newValue], { shouldValidate: true });
-        }
-        input.value = ''; // Clear input field
-      }
-    }
-  };
-
-  const removeFromArray = (valueToRemove: string, field: 'requiredSkills' | 'roles') => {
-    const currentValues = form.getValues(field);
-    form.setValue(field, currentValues.filter(value => value !== valueToRemove), { shouldValidate: true });
-  };
 
   const onSubmit = async (data: OpportunityFormValues) => {
     if (!user || !firestore) {
@@ -78,15 +113,19 @@ export default function CreateOpportunityForm() {
     setIsLoading(true);
 
     try {
-        const docRef = await addDoc(collection(firestore, 'opportunities'), {
-            ...data,
-            ownerId: user.uid,
-            ownerName: user.displayName,
-            ownerPhotoURL: user.photoURL,
-            teamMembers: [],
-            joinRequests: [],
-            createdAt: serverTimestamp(),
-        });
+        const docData = {
+          ...data,
+          requiredSkills: data.requiredSkills.map(s => s.value), // transform back to array of strings
+          roles: data.roles.map(r => r.value), // transform back to array of strings
+          ownerId: user.uid,
+          ownerName: user.displayName,
+          ownerPhotoURL: user.photoURL,
+          teamMembers: [],
+          joinRequests: [],
+          createdAt: serverTimestamp(),
+        };
+
+        const docRef = await addDoc(collection(firestore, 'opportunities'), docData);
 
       toast({
         title: 'Opportunity Created!',
@@ -115,30 +154,30 @@ export default function CreateOpportunityForm() {
             </CardHeader>
             <CardContent className="space-y-4">
                 <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., Build a Mobile App for Campus Events" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Build a Mobile App for Campus Events" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                  )}
                 />
                 <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                        <Textarea placeholder="Describe your project, goals, and what you're looking for in team members." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe your project, goals, and what you're looking for in team members." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                  )}
                 />
             </CardContent>
         </Card>
@@ -149,61 +188,28 @@ export default function CreateOpportunityForm() {
                 <CardDescription>Specify the expertise and roles needed for your team.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="requiredSkills"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Required Skills</FormLabel>
-                        <FormControl>
-                            <div className="space-y-2">
-                                <div className="flex flex-wrap gap-2">
-                                    {field.value.map(skill => (
-                                    <Badge key={skill} variant="secondary" className="text-sm py-1 pl-3 pr-2">
-                                        {skill}
-                                        <button type="button" onClick={() => removeFromArray(skill, 'requiredSkills')} className="ml-2 rounded-full hover:bg-destructive/20 p-0.5">
-                                        <X className="h-3 w-3" />
-                                        </button>
-                                    </Badge>
-                                    ))}
-                                </div>
-                                <Input
-                                    placeholder="e.g., React, Python, UI/UX Design (press Enter to add)"
-                                    onKeyDown={(e) => handleArrayInput(e, 'requiredSkills')}
-                                />
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+                <Controller
+                  control={form.control}
+                  name="requiredSkills"
+                  render={({ field }) => (
+                    <ArrayInput
+                      control={form.control}
+                      name="requiredSkills"
+                      label="Required Skills"
+                      placeholder="e.g., React, Python, UI/UX Design"
+                    />
+                  )}
                 />
-
-                <FormField
+                <Controller
                     control={form.control}
                     name="roles"
                     render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Open Roles</FormLabel>
-                        <FormControl>
-                            <div className="space-y-2">
-                                <div className="flex flex-wrap gap-2">
-                                    {field.value.map(role => (
-                                    <Badge key={role} variant="secondary" className="text-sm py-1 pl-3 pr-2">
-                                        {role}
-                                        <button type="button" onClick={() => removeFromArray(role, 'roles')} className="ml-2 rounded-full hover:bg-destructive/20 p-0.5">
-                                        <X className="h-3 w-3" />
-                                        </button>
-                                    </Badge>
-                                    ))}
-                                </div>
-                                <Input
-                                    placeholder="e.g., Frontend Developer, Project Manager (press Enter to add)"
-                                    onKeyDown={(e) => handleArrayInput(e, 'roles')}
-                                />
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
+                        <ArrayInput
+                        control={form.control}
+                        name="roles"
+                        label="Open Roles"
+                        placeholder="e.g., Frontend Developer, Project Manager"
+                        />
                     )}
                 />
             </CardContent>
