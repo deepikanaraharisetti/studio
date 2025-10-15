@@ -3,7 +3,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { doc, updateDoc, arrayUnion, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, onSnapshot, getDoc, collection, query, where, getDocs, arrayRemove } from 'firebase/firestore';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 
@@ -40,14 +40,13 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
         if (docSnap.exists()) {
           const oppData = { id: docSnap.id, ...docSnap.data() } as Opportunity;
           setOpportunity(oppData);
-          // After setting opportunity, fetch profiles for join requests
+          
           if (oppData.joinRequests && oppData.joinRequests.length > 0) {
             const userIds = oppData.joinRequests;
-            const profiles = await Promise.all(userIds.map(async (id) => {
-                const userDoc = await getDoc(doc(firestore, 'users', id));
-                return userDoc.exists() ? userDoc.data() as UserProfile : null;
-            }));
-            setJoinRequestProfiles(profiles.filter(p => p !== null) as UserProfile[]);
+            const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', userIds));
+            const profileSnapshots = await getDocs(profilesQuery);
+            const profiles = profileSnapshots.docs.map(doc => doc.data() as UserProfile);
+            setJoinRequestProfiles(profiles);
           } else {
             setJoinRequestProfiles([]);
           }
@@ -93,17 +92,23 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     const opportunityRef = doc(firestore, 'opportunities', id);
 
     try {
-        await updateDoc(opportunityRef, {
-            joinRequests: arrayUnion(applicant.uid) // This was likely a bug, should be arrayRemove
-        });
-
         if (action === 'accept') {
+            const applicantProfile = {
+                uid: applicant.uid,
+                displayName: applicant.displayName,
+                email: applicant.email,
+                photoURL: applicant.photoURL
+            };
             await updateDoc(opportunityRef, {
-                teamMembers: arrayUnion(applicant),
+                teamMembers: arrayUnion(applicantProfile),
                 teamMemberIds: arrayUnion(applicant.uid),
+                joinRequests: arrayRemove(applicant.uid)
             });
             toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
         } else { // decline
+             await updateDoc(opportunityRef, {
+                joinRequests: arrayRemove(applicant.uid)
+            });
             toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
         }
     } catch (error) {
@@ -154,7 +159,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
         {isOwner && joinRequestProfiles.length > 0 && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Join Requests</CardTitle>
+                    <CardTitle>Join Requests ({joinRequestProfiles.length})</CardTitle>
                     <CardDescription>Review users who want to join your team.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">

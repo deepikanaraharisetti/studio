@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
@@ -36,30 +36,49 @@ export default function MyProjectsPage() {
 
   useEffect(() => {
     const fetchJoinRequestProfiles = async () => {
-        if (!opportunitiesList || !firestore) return;
+        if (!opportunitiesList || !firestore || opportunitiesList.length === 0) {
+            setJoinRequests([]);
+            setRequestsLoading(false);
+            return;
+        }
 
         setRequestsLoading(true);
+        
+        const allRequestUserIds = opportunitiesList.flatMap(opp => opp.joinRequests || []);
+        if (allRequestUserIds.length === 0) {
+            setJoinRequests([]);
+            setRequestsLoading(false);
+            return;
+        }
+
+        // Fetch all unique user profiles in a single batch
+        const uniqueUserIds = [...new Set(allRequestUserIds)];
+        const usersRef = collection(firestore, 'users');
+        const usersQuery = query(usersRef, where('uid', 'in', uniqueUserIds));
+        const userDocs = await getDocs(usersQuery);
+        const profilesMap = new Map(userDocs.docs.map(doc => [doc.id, doc.data() as UserProfile]));
+
+        // Combine profile data with request context
         const allRequests: JoinRequestWithUserProfile[] = [];
         for (const opp of opportunitiesList) {
             if (opp.joinRequests && opp.joinRequests.length > 0) {
-                const userIds = opp.joinRequests;
-                const profiles = await Promise.all(userIds.map(async (id) => {
-                    const userDoc = await getDoc(doc(firestore, 'users', id));
-                    if (userDoc.exists()) {
-                        return {
-                            ...(userDoc.data() as UserProfile),
+                for (const userId of opp.joinRequests) {
+                    const profile = profilesMap.get(userId);
+                    if (profile) {
+                        allRequests.push({
+                            ...profile,
                             opportunityId: opp.id,
                             opportunityTitle: opp.title,
-                        };
+                        });
                     }
-                    return null;
-                }));
-                allRequests.push(...(profiles.filter(p => p !== null) as JoinRequestWithUserProfile[]));
+                }
             }
         }
+
         setJoinRequests(allRequests);
         setRequestsLoading(false);
     }
+
     if (!opportunitiesLoading) {
         fetchJoinRequestProfiles();
     }
@@ -77,8 +96,16 @@ export default function MyProjectsPage() {
 
     try {
         if (action === 'accept') {
+             // To accept, we add the user to teamMembers and remove them from joinRequests
+            const userProfileData = {
+                uid: request.uid,
+                displayName: request.displayName,
+                email: request.email,
+                photoURL: request.photoURL,
+            };
+
             await updateDoc(opportunityRef, {
-                teamMembers: arrayUnion(request),
+                teamMembers: arrayUnion(userProfileData),
                 teamMemberIds: arrayUnion(request.uid),
                 joinRequests: arrayRemove(request.uid)
             });
@@ -169,3 +196,5 @@ export default function MyProjectsPage() {
     </div>
   );
 }
+
+    
