@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -61,6 +60,7 @@ export default function SignupPage() {
         skills: [],
         interests: [],
       };
+      // CRITICAL FIX: Ensure the user document is created before redirecting.
       await setDoc(doc(firestore, 'users', user.uid), userProfile);
       
       router.push('/dashboard');
