@@ -51,14 +51,12 @@ export default function MyProjectsPage() {
             return;
         }
 
-        // Fetch all unique user profiles in a single batch
         const uniqueUserIds = [...new Set(allRequestUserIds)];
         const usersRef = collection(firestore, 'users');
         const usersQuery = query(usersRef, where('uid', 'in', uniqueUserIds));
         const userDocs = await getDocs(usersQuery);
-        const profilesMap = new Map(userDocs.docs.map(doc => [doc.id, doc.data() as UserProfile]));
+        const profilesMap = new Map(userDocs.docs.map(doc => [doc.data().uid, doc.data() as UserProfile]));
 
-        // Combine profile data with request context
         const allRequests: JoinRequestWithUserProfile[] = [];
         for (const opp of opportunitiesList) {
             if (opp.joinRequests && opp.joinRequests.length > 0) {
@@ -96,7 +94,6 @@ export default function MyProjectsPage() {
 
     try {
         if (action === 'accept') {
-             // To accept, we add the user to teamMembers and remove them from joinRequests
             const userProfileData = {
                 uid: request.uid,
                 displayName: request.displayName,
@@ -116,7 +113,6 @@ export default function MyProjectsPage() {
             });
             toast({ title: 'Request Declined', description: `You have declined the request from ${request.displayName}.` });
         }
-        // Manually refilter the requests list in the UI
         setJoinRequests(prev => prev.filter(r => r.uid !== request.uid || r.opportunityId !== request.opportunityId));
     } catch (error) {
         console.error("Error handling request:", error)
@@ -196,5 +192,3 @@ export default function MyProjectsPage() {
     </div>
   );
 }
-
-    

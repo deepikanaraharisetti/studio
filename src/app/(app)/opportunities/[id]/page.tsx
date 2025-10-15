@@ -43,7 +43,6 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
           
           if (oppData.joinRequests && oppData.joinRequests.length > 0) {
             const userIds = oppData.joinRequests;
-            // Batch fetch user profiles
             const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', userIds));
             const profileSnapshots = await getDocs(profilesQuery);
             const profiles = profileSnapshots.docs.map(doc => doc.data() as UserProfile);
@@ -243,7 +242,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5"/>Team Members ({opportunity.teamMembers.length + 1})</CardTitle>
-          </CardHeader>
+          </Header>
           <CardContent className="space-y-4">
             <Link href={`/users/${opportunity.ownerId}`} className="flex items-center gap-3 hover:bg-accent p-2 rounded-md">
               <Avatar>
@@ -273,5 +272,3 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     </div>
   );
 }
-
-    
