@@ -43,11 +43,17 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
 
           if (oppData.joinRequests && oppData.joinRequests.length > 0) {
               const uniqueUserIds = [...new Set(oppData.joinRequests)];
+              const usersRef = collection(firestore, 'users');
+
               if (uniqueUserIds.length > 0) {
-                  // Batch fetch profiles to avoid multiple reads
-                  const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', uniqueUserIds.slice(0, 30)));
-                  const profileSnapshots = await getDocs(profilesQuery);
-                  const profiles = profileSnapshots.docs.map(doc => doc.data() as UserProfile);
+                  // Efficiently fetch all user profiles by their document ID (which is the UID)
+                  const userProfilePromises = uniqueUserIds.map(userId => getDoc(doc(usersRef, userId)));
+                  const userProfileSnapshots = await Promise.all(userProfilePromises);
+                  
+                  const profiles = userProfileSnapshots
+                      .filter(snap => snap.exists())
+                      .map(snap => snap.data() as UserProfile);
+
                   setJoinRequestProfiles(profiles);
               } else {
                   setJoinRequestProfiles([]);

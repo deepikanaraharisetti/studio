@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion, writeBatch, getDoc } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
@@ -36,52 +36,47 @@ export default function MyProjectsPage() {
 
   useEffect(() => {
     const fetchJoinRequestProfiles = async () => {
-        if (!opportunitiesList || !firestore || opportunitiesList.length === 0) {
+        if (!opportunitiesList || !firestore) {
             setJoinRequests([]);
             setRequestsLoading(false);
             return;
         }
-
+    
         setRequestsLoading(true);
         
-        const allRequestUserIds = opportunitiesList.flatMap(opp => opp.joinRequests || []);
+        const allRequests: JoinRequestWithUserProfile[] = [];
+        const allRequestUserIds = opportunitiesList.flatMap(opp => 
+            (opp.joinRequests || []).map(userId => ({ userId, opp }))
+        );
+
         if (allRequestUserIds.length === 0) {
             setJoinRequests([]);
             setRequestsLoading(false);
             return;
         }
 
-        const uniqueUserIds = [...new Set(allRequestUserIds)];
+        const uniqueUserIds = [...new Set(allRequestUserIds.map(req => req.userId))];
         const usersRef = collection(firestore, 'users');
-        
-        // Firestore 'in' queries are limited to 30 items. We need to batch.
-        const userProfilePromises: Promise<UserProfile[]>[] = [];
-        for (let i = 0; i < uniqueUserIds.length; i += 30) {
-            const batchIds = uniqueUserIds.slice(i, i + 30);
-            const usersQuery = query(usersRef, where('uid', 'in', batchIds));
-            const promise = getDocs(usersQuery).then(snapshot => 
-                snapshot.docs.map(doc => doc.data() as UserProfile)
-            );
-            userProfilePromises.push(promise);
-        }
-        
-        const allProfileBatches = await Promise.all(userProfilePromises);
-        const allProfiles = allProfileBatches.flat();
-        const profilesMap = new Map(allProfiles.map(profile => [profile.uid, profile]));
 
-        const allRequests: JoinRequestWithUserProfile[] = [];
-        for (const opp of opportunitiesList) {
-            if (opp.joinRequests && opp.joinRequests.length > 0) {
-                for (const userId of opp.joinRequests) {
-                    const profile = profilesMap.get(userId);
-                    if (profile) {
-                        allRequests.push({
-                            ...profile,
-                            opportunityId: opp.id,
-                            opportunityTitle: opp.title,
-                        });
-                    }
-                }
+        // Efficiently fetch all user profiles by their document ID (which is the UID)
+        const userProfilePromises = uniqueUserIds.map(userId => getDoc(doc(usersRef, userId)));
+        
+        const userProfileSnapshots = await Promise.all(userProfilePromises);
+        const profilesMap = new Map<string, UserProfile>();
+        userProfileSnapshots.forEach(docSnap => {
+            if (docSnap.exists()) {
+                profilesMap.set(docSnap.id, docSnap.data() as UserProfile);
+            }
+        });
+
+        for (const { userId, opp } of allRequestUserIds) {
+            const profile = profilesMap.get(userId);
+            if (profile) {
+                allRequests.push({
+                    ...profile,
+                    opportunityId: opp.id,
+                    opportunityTitle: opp.title,
+                });
             }
         }
 
