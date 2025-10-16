@@ -44,7 +44,6 @@ export default function MyProjectsPage() {
     
         setRequestsLoading(true);
         
-        const allRequests: JoinRequestWithUserProfile[] = [];
         const allRequestUserIds = opportunitiesList.flatMap(opp => 
             (opp.joinRequests || []).map(userId => ({ userId, opp }))
         );
@@ -56,19 +55,27 @@ export default function MyProjectsPage() {
         }
 
         const uniqueUserIds = [...new Set(allRequestUserIds.map(req => req.userId))];
-        const usersRef = collection(firestore, 'users');
-
-        // Efficiently fetch all user profiles by their document ID (which is the UID)
-        const userProfilePromises = uniqueUserIds.map(userId => getDoc(doc(usersRef, userId)));
         
-        const userProfileSnapshots = await Promise.all(userProfilePromises);
+        if (uniqueUserIds.length === 0) {
+            setJoinRequests([]);
+            setRequestsLoading(false);
+            return;
+        }
+
+        const usersRef = collection(firestore, 'users');
+        
+        // Fetch all user profiles by their document ID (which is the UID) in a single query
+        const profilesQuery = query(usersRef, where('__name__', 'in', uniqueUserIds));
+        const userProfileSnapshots = await getDocs(profilesQuery);
+
         const profilesMap = new Map<string, UserProfile>();
         userProfileSnapshots.forEach(docSnap => {
             if (docSnap.exists()) {
                 profilesMap.set(docSnap.id, docSnap.data() as UserProfile);
             }
         });
-
+        
+        const allRequests: JoinRequestWithUserProfile[] = [];
         for (const { userId, opp } of allRequestUserIds) {
             const profile = profilesMap.get(userId);
             if (profile) {
@@ -98,8 +105,7 @@ export default function MyProjectsPage() {
     if (!user || !firestore) return;
     
     const opportunityRef = doc(firestore, 'opportunities', request.opportunityId);
-    let updateData: any;
-
+    
     if (action === 'accept') {
         const userProfileData = {
             uid: request.uid,
@@ -107,7 +113,7 @@ export default function MyProjectsPage() {
             email: request.email,
             photoURL: request.photoURL,
         };
-        updateData = {
+        const updateData = {
             teamMembers: arrayUnion(userProfileData),
             teamMemberIds: arrayUnion(request.uid),
             joinRequests: arrayRemove(request.uid)
@@ -127,7 +133,7 @@ export default function MyProjectsPage() {
                 errorEmitter.emit('permission-error', permissionError);
             });
     } else { // decline
-        updateData = {
+        const updateData = {
             joinRequests: arrayRemove(request.uid)
         };
         updateDoc(opportunityRef, updateData)

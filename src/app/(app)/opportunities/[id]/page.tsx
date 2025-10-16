@@ -4,7 +4,7 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { doc, updateDoc, arrayUnion, onSnapshot, getDoc, collection, query, where, getDocs, arrayRemove } from 'firebase/firestore';
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 
 import LoadingSpinner from '@/components/loading-spinner';
@@ -28,65 +28,69 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const opportunityRef = useMemoFirebase(() => firestore ? doc(firestore, 'opportunities', id) : null, [firestore, id]);
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [joinRequestProfiles, setJoinRequestProfiles] = useState<JoinRequestWithUserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (id && firestore) {
-      const docRef = doc(firestore, 'opportunities', id);
-      const unsubscribe = onSnapshot(docRef, async (docSnap) => {
-        if (docSnap.exists()) {
-          const oppData = { id: docSnap.id, ...docSnap.data() } as Opportunity;
-          setOpportunity(oppData);
+    if (!opportunityRef) {
+        setLoading(false);
+        return;
+    };
+    
+    setLoading(true);
+    const unsubscribe = onSnapshot(opportunityRef, async (docSnap) => {
+      if (docSnap.exists()) {
+        const oppData = { id: docSnap.id, ...docSnap.data() } as Opportunity;
+        setOpportunity(oppData);
 
-          if (oppData.joinRequests && oppData.joinRequests.length > 0) {
-              const uniqueUserIds = [...new Set(oppData.joinRequests)];
-              const usersRef = collection(firestore, 'users');
+        if (oppData.joinRequests && oppData.joinRequests.length > 0) {
+            const uniqueUserIds = [...new Set(oppData.joinRequests)];
+            const usersRef = collection(firestore!, 'users');
 
-              if (uniqueUserIds.length > 0) {
-                  // Efficiently fetch all user profiles by their document ID (which is the UID)
-                  const userProfilePromises = uniqueUserIds.map(userId => getDoc(doc(usersRef, userId)));
-                  const userProfileSnapshots = await Promise.all(userProfilePromises);
-                  
-                  const profiles = userProfileSnapshots
-                      .filter(snap => snap.exists())
-                      .map(snap => snap.data() as UserProfile);
+            if (uniqueUserIds.length > 0) {
+                const profilesQuery = query(usersRef, where('__name__', 'in', uniqueUserIds));
+                const userProfileSnapshots = await getDocs(profilesQuery);
+                
+                const profiles = userProfileSnapshots
+                    .filter(snap => snap.exists())
+                    .map(snap => snap.data() as UserProfile);
 
-                  setJoinRequestProfiles(profiles);
-              } else {
-                  setJoinRequestProfiles([]);
-              }
-          } else {
-              setJoinRequestProfiles([]);
-          }
+                setJoinRequestProfiles(profiles);
+            } else {
+                setJoinRequestProfiles([]);
+            }
         } else {
-          setOpportunity(null);
-          setJoinRequestProfiles([]);
+            setJoinRequestProfiles([]);
         }
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching opportunity:", error);
-        setLoading(false);
-      });
-      return () => unsubscribe();
-    }
-  }, [id, firestore]);
+      } else {
+        setOpportunity(null);
+        setJoinRequestProfiles([]);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching opportunity:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [id, firestore, opportunityRef]);
 
-  const handleJoinRequest = async () => {
+  const handleJoinRequest = () => {
     if (!user || !opportunity || !firestore) return;
     setIsSubmitting(true);
-    const opportunityRef = doc(firestore, 'opportunities', id);
+    const oppRef = doc(firestore, 'opportunities', id);
     const updateData = { joinRequests: arrayUnion(user.uid) };
 
-    updateDoc(opportunityRef, updateData)
+    updateDoc(oppRef, updateData)
       .then(() => {
         toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
       })
-      .catch((serverError: any) => {
+      .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
-            path: opportunityRef.path,
+            path: oppRef.path,
             operation: 'update',
             requestResourceData: updateData,
             cause: serverError
@@ -101,9 +105,8 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
   const handleRequestAction = (applicant: UserProfile, action: 'accept' | 'decline') => {
     if (!user || !opportunity || user.uid !== opportunity.ownerId || !firestore) return;
     
-    const opportunityRef = doc(firestore, 'opportunities', id);
-    let updateData: any;
-
+    const oppRef = doc(firestore, 'opportunities', id);
+    
     if (action === 'accept') {
         const applicantProfile = {
             uid: applicant.uid,
@@ -111,18 +114,18 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
             email: applicant.email,
             photoURL: applicant.photoURL
         };
-        updateData = {
+        const updateData = {
             teamMembers: arrayUnion(applicantProfile),
             teamMemberIds: arrayUnion(applicant.uid),
             joinRequests: arrayRemove(applicant.uid)
         };
-        updateDoc(opportunityRef, updateData)
+        updateDoc(oppRef, updateData)
             .then(() => {
                 toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
             })
             .catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
-                    path: opportunityRef.path,
+                    path: oppRef.path,
                     operation: 'update',
                     requestResourceData: updateData,
                     cause: serverError
@@ -130,16 +133,16 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
                 errorEmitter.emit('permission-error', permissionError);
             });
     } else { // decline
-        updateData = {
+        const updateData = {
             joinRequests: arrayRemove(applicant.uid)
         };
-        updateDoc(opportunityRef, updateData)
+        updateDoc(oppRef, updateData)
             .then(() => {
                 toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
             })
             .catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
-                    path: opportunityRef.path,
+                    path: oppRef.path,
                     operation: 'update',
                     requestResourceData: updateData,
                     cause: serverError
@@ -165,7 +168,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
     if (isOwner) return <Button className="w-full" size="lg" disabled variant="outline">You are the owner</Button>;
     return (
         <Button className="w-full" size="lg" onClick={handleJoinRequest} disabled={isSubmitting}>
-            {isSubmitting ? <LoadingSpinner /> : <> <PlusCircle className="mr-2"/> Request to Join </>}
+            {isSubmitting ? <LoadingSpinner /> : <> <PlusCircle className="mr-2"/> Request to Join</>}
         </Button>
     )
   }
