@@ -78,11 +78,12 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
       .then(() => {
         toast({ title: "Request Sent!", description: "The project owner has been notified of your interest." });
       })
-      .catch((error: any) => {
+      .catch((serverError: any) => {
         const permissionError = new FirestorePermissionError({
             path: opportunityRef.path,
             operation: 'update',
-            requestResourceData: updateData
+            requestResourceData: updateData,
+            cause: serverError
         });
         errorEmitter.emit('permission-error', permissionError);
       })
@@ -113,11 +114,12 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
             .then(() => {
                 toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
             })
-            .catch((error) => {
+            .catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
                     path: opportunityRef.path,
                     operation: 'update',
-                    requestResourceData: updateData
+                    requestResourceData: updateData,
+                    cause: serverError
                 });
                 errorEmitter.emit('permission-error', permissionError);
             });
@@ -129,11 +131,12 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
             .then(() => {
                 toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
             })
-            .catch((error) => {
+            .catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
                     path: opportunityRef.path,
                     operation: 'update',
-                    requestResourceData: updateData
+                    requestResourceData: updateData,
+                    cause: serverError
                 });
                 errorEmitter.emit('permission-error', permissionError);
             });
@@ -274,7 +277,8 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
               </Avatar>
               <div>
                 <p className="font-semibold">{opportunity.ownerName}</p>
-                <p className="text-sm text-muted-foreground">Project Owner</p>              </div>
+                <p className="text-sm text-muted-foreground">Project Owner</p>
+              </div>
             </Link>
             {opportunity.teamMembers.map(member => (
               <Link href={`/users/${member.uid}`} key={member.uid} className="flex items-center gap-3 hover:bg-accent p-2 rounded-md">

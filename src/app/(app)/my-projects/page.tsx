@@ -122,11 +122,12 @@ export default function MyProjectsPage() {
                 toast({ title: 'Member Added', description: `${request.displayName} is now on the team.` });
                 setJoinRequests(prev => prev.filter(r => r.uid !== request.uid || r.opportunityId !== request.opportunityId));
             })
-            .catch((error) => {
+            .catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
                     path: opportunityRef.path,
                     operation: 'update',
-                    requestResourceData: updateData
+                    requestResourceData: updateData,
+                    cause: serverError
                 });
                 errorEmitter.emit('permission-error', permissionError);
             });
@@ -139,11 +140,12 @@ export default function MyProjectsPage() {
                 toast({ title: 'Request Declined', description: `You have declined the request from ${request.displayName}.` });
                 setJoinRequests(prev => prev.filter(r => r.uid !== request.uid || r.opportunityId !== request.opportunityId));
             })
-            .catch((error) => {
+            .catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
                     path: opportunityRef.path,
                     operation: 'update',
-                    requestResourceData: updateData
+                    requestResourceData: updateData,
+                    cause: serverError
                 });
                 errorEmitter.emit('permission-error', permissionError);
             });

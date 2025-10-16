@@ -1,3 +1,4 @@
+
 'use client';
 import { getAuth, type User } from 'firebase/auth';
 
@@ -5,6 +6,7 @@ type SecurityRuleContext = {
   path: string;
   operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
   requestResourceData?: any;
+  cause?: any;
 };
 
 interface FirebaseAuthToken {
@@ -116,7 +118,8 @@ export class FirestorePermissionError extends Error {
 
   constructor(context: SecurityRuleContext) {
     const requestObject = buildRequestObject(context);
-    super(buildErrorMessage(requestObject));
+    // Pass the original error cause up if it exists
+    super(buildErrorMessage(requestObject), { cause: context.cause });
     this.name = 'FirebaseError';
     this.request = requestObject;
   }
