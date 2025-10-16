@@ -104,9 +104,10 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
 
   const handleRequestAction = (applicant: UserProfile, action: 'accept' | 'decline') => {
     if (!user || !opportunity || user.uid !== opportunity.ownerId || !firestore) return;
-    
+
     const oppRef = doc(firestore, 'opportunities', id);
-    
+    let updateData;
+
     if (action === 'accept') {
         const applicantProfile = {
             uid: applicant.uid,
@@ -114,7 +115,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
             email: applicant.email,
             photoURL: applicant.photoURL
         };
-        const updateData = {
+        updateData = {
             teamMembers: arrayUnion(applicantProfile),
             teamMemberIds: arrayUnion(applicant.uid),
             joinRequests: arrayRemove(applicant.uid)
@@ -133,7 +134,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
                 errorEmitter.emit('permission-error', permissionError);
             });
     } else { // decline
-        const updateData = {
+        updateData = {
             joinRequests: arrayRemove(applicant.uid)
         };
         updateDoc(oppRef, updateData)
@@ -150,7 +151,7 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
                 errorEmitter.emit('permission-error', permissionError);
             });
     }
-  }
+}
 
 
   const isOwner = opportunity?.ownerId === user?.uid;
