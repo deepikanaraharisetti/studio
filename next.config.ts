@@ -11,11 +11,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    // This allows cross-origin requests in development, which is needed for
-    // the Firebase Studio environment.
-    allowedDevOrigins: ["https://*.cluster-ubrd2huk7jh6otbgyei4h62ope.cloudworkstations.dev"],
-  },
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -26,10 +21,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
+        protocol: 'https'
       },
       {
         protocol: 'https',
