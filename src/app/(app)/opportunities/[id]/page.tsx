@@ -44,7 +44,8 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
           if (oppData.joinRequests && oppData.joinRequests.length > 0) {
               const uniqueUserIds = [...new Set(oppData.joinRequests)];
               if (uniqueUserIds.length > 0) {
-                  const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', uniqueUserIds));
+                  // Batch fetch profiles to avoid multiple reads
+                  const profilesQuery = query(collection(firestore, 'users'), where('uid', 'in', uniqueUserIds.slice(0, 30)));
                   const profileSnapshots = await getDocs(profilesQuery);
                   const profiles = profileSnapshots.docs.map(doc => doc.data() as UserProfile);
                   setJoinRequestProfiles(profiles);
@@ -90,34 +91,52 @@ export default function OpportunityDetailsPage({ params }: { params: Promise<{ i
       });
   };
 
-  const handleRequestAction = async (applicant: UserProfile, action: 'accept' | 'decline') => {
+  const handleRequestAction = (applicant: UserProfile, action: 'accept' | 'decline') => {
     if (!user || !opportunity || user.uid !== opportunity.ownerId || !firestore) return;
     
     const opportunityRef = doc(firestore, 'opportunities', id);
+    let updateData: any;
 
-    try {
-        if (action === 'accept') {
-            const applicantProfile = {
-                uid: applicant.uid,
-                displayName: applicant.displayName,
-                email: applicant.email,
-                photoURL: applicant.photoURL
-            };
-            await updateDoc(opportunityRef, {
-                teamMembers: arrayUnion(applicantProfile),
-                teamMemberIds: arrayUnion(applicant.uid),
-                joinRequests: arrayRemove(applicant.uid)
+    if (action === 'accept') {
+        const applicantProfile = {
+            uid: applicant.uid,
+            displayName: applicant.displayName,
+            email: applicant.email,
+            photoURL: applicant.photoURL
+        };
+        updateData = {
+            teamMembers: arrayUnion(applicantProfile),
+            teamMemberIds: arrayUnion(applicant.uid),
+            joinRequests: arrayRemove(applicant.uid)
+        };
+        updateDoc(opportunityRef, updateData)
+            .then(() => {
+                toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
+            })
+            .catch((error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: opportunityRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-            toast({ title: 'Member Added', description: `${applicant.displayName} is now on the team.` });
-        } else { // decline
-             await updateDoc(opportunityRef, {
-                joinRequests: arrayRemove(applicant.uid)
+    } else { // decline
+        updateData = {
+            joinRequests: arrayRemove(applicant.uid)
+        };
+        updateDoc(opportunityRef, updateData)
+            .then(() => {
+                toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
+            })
+            .catch((error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: opportunityRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-            toast({ title: 'Request Declined', description: `You have declined the request from ${applicant.displayName}.` });
-        }
-    } catch (error) {
-        console.error("Error handling request:", error)
-        toast({ title: "Error", description: "Could not process the request. Please try again.", variant: "destructive" });
     }
   }
 

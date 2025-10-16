@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Opportunity, UserProfile } from '@/lib/types';
 import OpportunityCard from '@/components/opportunity-card';
 import LoadingSpinner from '@/components/loading-spinner';
@@ -53,9 +53,21 @@ export default function MyProjectsPage() {
 
         const uniqueUserIds = [...new Set(allRequestUserIds)];
         const usersRef = collection(firestore, 'users');
-        const usersQuery = query(usersRef, where('uid', 'in', uniqueUserIds));
-        const userDocs = await getDocs(usersQuery);
-        const profilesMap = new Map(userDocs.docs.map(doc => [doc.data().uid, doc.data() as UserProfile]));
+        
+        // Firestore 'in' queries are limited to 30 items. We need to batch.
+        const userProfilePromises: Promise<UserProfile[]>[] = [];
+        for (let i = 0; i < uniqueUserIds.length; i += 30) {
+            const batchIds = uniqueUserIds.slice(i, i + 30);
+            const usersQuery = query(usersRef, where('uid', 'in', batchIds));
+            const promise = getDocs(usersQuery).then(snapshot => 
+                snapshot.docs.map(doc => doc.data() as UserProfile)
+            );
+            userProfilePromises.push(promise);
+        }
+        
+        const allProfileBatches = await Promise.all(userProfilePromises);
+        const allProfiles = allProfileBatches.flat();
+        const profilesMap = new Map(allProfiles.map(profile => [profile.uid, profile]));
 
         const allRequests: JoinRequestWithUserProfile[] = [];
         for (const opp of opportunitiesList) {
@@ -87,36 +99,54 @@ export default function MyProjectsPage() {
     return name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
   };
   
-  const handleRequestAction = async (request: JoinRequestWithUserProfile, action: 'accept' | 'decline') => {
+  const handleRequestAction = (request: JoinRequestWithUserProfile, action: 'accept' | 'decline') => {
     if (!user || !firestore) return;
     
     const opportunityRef = doc(firestore, 'opportunities', request.opportunityId);
+    let updateData: any;
 
-    try {
-        if (action === 'accept') {
-            const userProfileData = {
-                uid: request.uid,
-                displayName: request.displayName,
-                email: request.email,
-                photoURL: request.photoURL,
-            };
-
-            await updateDoc(opportunityRef, {
-                teamMembers: arrayUnion(userProfileData),
-                teamMemberIds: arrayUnion(request.uid),
-                joinRequests: arrayRemove(request.uid)
+    if (action === 'accept') {
+        const userProfileData = {
+            uid: request.uid,
+            displayName: request.displayName,
+            email: request.email,
+            photoURL: request.photoURL,
+        };
+        updateData = {
+            teamMembers: arrayUnion(userProfileData),
+            teamMemberIds: arrayUnion(request.uid),
+            joinRequests: arrayRemove(request.uid)
+        };
+        updateDoc(opportunityRef, updateData)
+            .then(() => {
+                toast({ title: 'Member Added', description: `${request.displayName} is now on the team.` });
+                setJoinRequests(prev => prev.filter(r => r.uid !== request.uid || r.opportunityId !== request.opportunityId));
+            })
+            .catch((error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: opportunityRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-            toast({ title: 'Member Added', description: `${request.displayName} is now on the team.` });
-        } else { // decline
-            await updateDoc(opportunityRef, {
-                joinRequests: arrayRemove(request.uid)
+    } else { // decline
+        updateData = {
+            joinRequests: arrayRemove(request.uid)
+        };
+        updateDoc(opportunityRef, updateData)
+            .then(() => {
+                toast({ title: 'Request Declined', description: `You have declined the request from ${request.displayName}.` });
+                setJoinRequests(prev => prev.filter(r => r.uid !== request.uid || r.opportunityId !== request.opportunityId));
+            })
+            .catch((error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: opportunityRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-            toast({ title: 'Request Declined', description: `You have declined the request from ${request.displayName}.` });
-        }
-        setJoinRequests(prev => prev.filter(r => r.uid !== request.uid || r.opportunityId !== request.opportunityId));
-    } catch (error) {
-        console.error("Error handling request:", error)
-        toast({ title: "Error", description: "Could not process the request. Please try again.", variant: "destructive" });
     }
   }
 
